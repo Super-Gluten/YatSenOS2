@@ -1,4 +1,4 @@
-#define PORT 0x3f8
+const PORT: u16 = 0x3f8;
 use core::fmt;
 use x86_64::instructions::port::Port;
 
@@ -25,7 +25,8 @@ impl SerialPort {
     }
 
     /// Initializes the serial port.
-    pub fn init(&self) -> Result<(), &'static str> {
+    // 更改为了可变借用
+    pub fn init(&mut self) -> Result<(), &'static str> {
         // FIXME: Initialize the serial port
         unsafe {
             // 1. 禁用所有中断
@@ -65,14 +66,13 @@ impl SerialPort {
         
         Ok(())
     }
-    }
 
     /// Sends a byte on the serial port.
     pub fn send(&mut self, data: u8) {
         // FIXME: Send a byte on the serial port
         unsafe {
-            while ((self.line_status.read() & 0x20) == 0) {}
-            self.data.write(a);
+            while (self.line_status.read() & 0x20) == 0 {}
+            self.data.write(data);
         }
     }
 
@@ -80,8 +80,12 @@ impl SerialPort {
     pub fn receive(&mut self) -> Option<u8> {
         // FIXME: Receive a byte on the serial port no wait
         unsafe {
-            while ((self.line_status.read() & 1) == 0) {}
-            self.data.read();
+            if self.line_status.read() & 1 != 0 {
+                // 数据就绪，读取并返回一个字节
+                Some(self.data.read())
+            } else { // 否则返回none
+                None
+            }
         }
     }
 }
