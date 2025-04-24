@@ -1,4 +1,4 @@
-use log::{Metadata, Record, Level, LevelFilter};
+use log::{Level, LevelFilter, Metadata, Record};
 
 pub fn init() {
     static LOGGER: Logger = Logger;
@@ -28,13 +28,13 @@ impl log::Log for Logger {
 
     fn log(&self, record: &Record) {
         // FIXME: Implement the logger with serial output
-        
-        // 使用self.enabled(record.metadata()) 
+
+        // 使用self.enabled(record.metadata())
         // 来判断当前日志是否需要输出
         if !self.enabled(record.metadata()) {
-            return ;
+            return;
         }
-        
+
         mod colors {
             pub const RED: &str = "\x1b[31m";
             pub const YELLOW: &str = "\x1b[33m";
@@ -45,19 +45,19 @@ impl log::Log for Logger {
         }
 
         let color_code = match record.level() {
-            log::Level::Error => colors::RED ,
-            log::Level::Warn => colors::YELLOW ,
-            log::Level::Info => colors::GREEN ,
-            log::Level::Debug => colors::DYAN ,
-            log::Level::Trace => colors::WHITE ,
+            log::Level::Error => colors::RED,
+            log::Level::Warn => colors::YELLOW,
+            log::Level::Info => colors::GREEN,
+            log::Level::Debug => colors::DYAN,
+            log::Level::Trace => colors::WHITE,
         };
-        let reset_code = colors::RESET ;
+        let reset_code = colors::RESET;
 
         // 使用reco.file_static()和record.line()
         // 获取源文件的位置信息
 
         // println!格式为：[时间][级别名称][位置][模块]
-        println!{
+        println! {
             "{}{:5}{} [{}{}][{}] {}",
             reset_code,
             record.level(),

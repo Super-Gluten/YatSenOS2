@@ -1,16 +1,16 @@
 #![no_std]
 
+pub use uefi::Status;
 pub use uefi::boot::{MemoryAttribute, MemoryDescriptor, MemoryType};
 pub use uefi::data_types::chars::*;
 pub use uefi::data_types::*;
 pub use uefi::proto::console::gop::{GraphicsOutput, ModeInfo};
-pub use uefi::Status;
 
 use arrayvec::ArrayVec;
 use core::ptr::NonNull;
+use x86_64::VirtAddr;
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
-use x86_64::VirtAddr;
 
 pub mod allocator;
 pub mod config;

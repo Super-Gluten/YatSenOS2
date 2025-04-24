@@ -72,5 +72,3 @@ impl<'a> Config<'a> {
 
 /*提供了一个读取并解析 boot.conf 的基本实现，
 可以使用它来自定义 bootloader 的行为、启动参数等等。*/
-
-

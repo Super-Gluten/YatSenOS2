@@ -7,8 +7,8 @@ use core::ptr::{copy_nonoverlapping, write_bytes};
 
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::{mapper::*, *};
-use x86_64::{align_up, PhysAddr, VirtAddr};
-use xmas_elf::{program, ElfFile};
+use x86_64::{PhysAddr, VirtAddr, align_up};
+use xmas_elf::{ElfFile, program};
 
 /// Map physical memory
 ///
@@ -95,13 +95,7 @@ pub fn load_elf(
             continue;
         }
 
-        load_segment(
-            elf,
-            physical_offset,
-            &segment,
-            page_table,
-            frame_allocator,
-        )?
+        load_segment(elf, physical_offset, &segment, page_table, frame_allocator)?
     }
 
     Ok(())
@@ -131,7 +125,7 @@ fn load_segment(
     // unimplemented!("Handle page table flags with segment flags!");
     // 关于PageTableFlags的相关信息可在 https://os.phil-opp.com/zh-CN/paging-introduction/#di-zhi-zhuan-huan-fan-li 中找到
     // 处理写权限，ELF 可写 -> 页表WRITALBE标志 -> 页表可写
-    if segment.flags().is_write() { 
+    if segment.flags().is_write() {
         page_table_flags |= PageTableFlags::WRITABLE;
     }
 
@@ -139,7 +133,7 @@ fn load_segment(
     if !segment.flags().is_execute() {
         page_table_flags |= PageTableFlags::NO_EXECUTE
     }
-    
+
     // 默认设置允许用户空间访问
     page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
 
