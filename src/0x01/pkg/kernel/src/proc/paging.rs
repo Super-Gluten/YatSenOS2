@@ -10,7 +10,7 @@ use x86_64::{
 
 pub struct Cr3RegValue {
     pub addr: PhysFrame,
-    pub flags: Cr3Flags,
+    pub flags: Cr3Flags, // 使用x86_64提供的Cr3Flags
 }
 
 impl Cr3RegValue {

@@ -17,10 +17,10 @@ type FrameAllocatorRef<'a> = &'a mut BootInfoFrameAllocator;
 
 pub struct ProcessVm {
     // page table is shared by parent and child
-    pub(super) page_table: PageTableContext,
+    pub(super) page_table: PageTableContext, // 使用paging.rs中的结构体
 
     // stack is pre-process allocated
-    pub(super) stack: Stack,
+    pub(super) stack: Stack, // 使用stack.rs中的结构体
 }
 
 impl ProcessVm {
@@ -34,18 +34,35 @@ impl ProcessVm {
     pub fn init_kernel_vm(mut self) -> Self {
         // TODO: record kernel code usage
         self.stack = Stack::kstack();
+        info!("{}", self.stack.memory_usage()); // 打印内核栈的内存大小
         self
     }
 
     pub fn init_proc_stack(&mut self, pid: ProcessId) -> VirtAddr {
         // FIXME: calculate the stack for pid
-        // FIXME: calculate the stack for pid
-        stack_top_addr
+        let stack_top_addr = STACK_INIT_TOP - STACK_MAX_SIZE * pid.0 as u64 ; // 计算对应用户栈栈顶地址
+        let stack_bot_addr = stack_top_addr - STACK_DEF_SIZE; 
+        // 默认用户栈分配大小为 STACK_DEF_SIZE
+        // 计算对应的栈底物理地址
+
+        let virtual_stack_top_addr = VirtAddr::new(stack_top_addr); // 构建该进程用户栈栈顶的虚拟地址
+
+        self.stack = Stack::new(Page::containing_address(virtual_stack_top_addr), STACK_DEF_PAGE);
+        // 调用stack.rs中的方法new，传递包含虚拟栈顶的页，并规定页数为默认用户栈页数
+
+        let page_table = &mut self.page_table.mapper(); // 获取能够传递给elf::map_range 函数的page_table参数
+        let frame_alloc = &mut *get_frame_alloc_for_sure(); // 获取能够传递给elf::map_range 函数的frame_alloc参数
+        elf::map_range(stack_bot_addr, STACK_DEF_PAGE, page_table, frame_alloc).unwrap(); 
+        // 这里一定要注意！因为map_range中，传入的addr是较小的那个，所以因为用户栈是向下增长，
+        // 即栈顶地址大于栈底，所以这里应该传入stack_bot_addr
+        // 第二项参数为用户栈默认页数，实际为1
+
+        virtual_stack_top_addr
     }
 
     pub fn handle_page_fault(&mut self, addr: VirtAddr) -> bool {
-        let mapper = &mut self.page_table.mapper();
-        let alloc = &mut *get_frame_alloc_for_sure();
+        let mapper = &mut self.page_table.mapper(); 
+        let alloc = &mut *get_frame_alloc_for_sure(); 
 
         self.stack.handle_page_fault(addr, mapper, alloc)
     }

@@ -3,22 +3,35 @@ use super::consts::*;
 use core::sync::atomic::{AtomicU64, Ordering};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
+use crate::utils::regs::*;
+
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     // 以偏移量的方式设置中断号，这里的实际中断向量号为32
-    idt[Interrupts::IrqBase as u8 + Irq::Timer as u8].set_handler_fn(clock_handler);
+    // 在003中，要求将时钟中断栈加载到idt中
+    idt[Interrupts::IrqBase as u8 + Irq::Timer as u8]
+        .set_handler_fn(clock_handler)
+        .set_stack_index(gdt::CLOCK_IST_INDEX);
 }
 
-pub extern "x86-interrupt" fn clock_handler(_sf: InterruptStackFrame) {
-    // 在禁用中断的上下文中执行，防止嵌套中断导致竞态条件
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        if inc_counter() % 0x100000 ==0 {
-        // if inc_counter() % 0x10000 == 0 {
-            info!("Tick! @{}", read_counter());
-        }
-        // 用于通知中断控制器中断处理已完成
-        super::ack();
-    });
+// 002 使用的中断处理代码
+// pub extern "x86-interrupt" fn clock_handler(_sf: InterruptStackFrame) {
+//     // 在禁用中断的上下文中执行，防止嵌套中断导致竞态条件
+//     x86_64::instructions::interrupts::without_interrupts(|| {
+//         if inc_counter() % 0x100000 ==0 {
+//         // if inc_counter() % 0x10000 == 0 {
+//             info!("Tick! @{}", read_counter());
+//         }
+//         // 用于通知中断控制器中断处理已完成
+//         super::ack();
+//     });
+// }
+
+// 003 新增的：利用as_handler宏重新定义中断处理函数
+pub extern "C" fn clock(mut context: ProcessContext) {
+    crate::proc::switch(context);
 }
+
+as_handler!(clock);
 
 // static COUNTER: /* FIXME */ = /* FIXME */;
 // 使用全局原子计数器，保证原子性

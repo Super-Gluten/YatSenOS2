@@ -45,16 +45,19 @@ pub fn new_stack_test_thread() {
     );
 
     // wait for progress exit
-    wait(pid);
+    wait(pid); // 阻塞等待测试完成
 }
 
 fn wait(pid: ProcessId) {
     loop {
         // FIXME: try to get the status of the process
-
+        // let status = manager::get_process_manager().get_proc(pid).read().status();
+        // if status == ProgramStatus::Dead 
+        
         // HINT: it's better to use the exit code
-
-        if /* FIXME: is the process exited? */ {
+        let exit_code = manager::get_process_manager().get_proc(&pid).unwrap().read().exit_code();
+         /* FIXME: is the process exited? */ 
+        if exit_code.is_none() {
             x86_64::instructions::hlt();
         } else {
             break;

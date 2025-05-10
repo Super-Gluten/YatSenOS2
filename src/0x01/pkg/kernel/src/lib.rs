@@ -27,6 +27,7 @@ pub use drivers::*;
 
 pub mod interrupt;
 pub mod memory;
+pub mod proc;
 
 pub use alloc::format;
 
