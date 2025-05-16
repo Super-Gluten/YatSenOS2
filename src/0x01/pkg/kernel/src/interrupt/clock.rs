@@ -4,13 +4,17 @@ use core::sync::atomic::{AtomicU64, Ordering};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 use crate::utils::regs::*;
+use crate::memory::gdt; // 在设置中断栈的时候需要使用对应的中断栈栈号
+use crate::proc::ProcessContext; // 在as_handler需要进程上下文
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     // 以偏移量的方式设置中断号，这里的实际中断向量号为32
     // 在003中，要求将时钟中断栈加载到idt中
-    idt[Interrupts::IrqBase as u8 + Irq::Timer as u8]
-        .set_handler_fn(clock_handler)
-        .set_stack_index(gdt::CLOCK_IST_INDEX);
+    unsafe {
+        idt[Interrupts::IrqBase as u8 + Irq::Timer as u8]
+            .set_handler_fn(clock_handler)
+            .set_stack_index(gdt::CLOCK_IST_INDEX);
+    }
 }
 
 // 002 使用的中断处理代码
@@ -28,7 +32,8 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
 
 // 003 新增的：利用as_handler宏重新定义中断处理函数
 pub extern "C" fn clock(mut context: ProcessContext) {
-    crate::proc::switch(context);
+    crate::proc::switch(&mut context);
+    super::ack(); // 用于通知中断控制器中断处理已完成
 }
 
 as_handler!(clock);

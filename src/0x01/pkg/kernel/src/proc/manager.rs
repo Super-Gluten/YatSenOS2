@@ -4,8 +4,10 @@ use crate::memory::{
     allocator::{ALLOCATOR, HEAP_SIZE},
     get_frame_alloc_for_sure, PAGE_SIZE,
 };
-use alloc::{collections::*, format};
+use alloc::{collections::*, format, sync::Arc};
 use spin::{Mutex, RwLock};
+use vm::*;
+use core::ops::DerefMut;
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
@@ -15,6 +17,8 @@ pub fn init(init: Arc<Process>) {
     // FIXME: set init process as Running
     // 使用write()函数获取inner的写锁，然后resume()函数修改状态
     init.write().resume();
+    // info!("kproc has been setting as running");
+    // info!("kproc status {:?}", init.read().status());
 
     // FIXME: set processor's current pid to init's pid
     // 调用processor.rs中的可用接口set_pid
@@ -54,12 +58,12 @@ impl ProcessManager {
     } // .ready_queue.lock()返回互斥锁，.push_back()压入进程的pid
 
     #[inline]
-    fn add_proc(&self, pid: ProcessId, proc: Arc<Process>) {
+    pub fn add_proc(&self, pid: ProcessId, proc: Arc<Process>) {
         self.processes.write().insert(pid, proc);
     }
 
     #[inline]
-    fn get_proc(&self, pid: &ProcessId) -> Option<Arc<Process>> {
+    pub fn get_proc(&self, pid: &ProcessId) -> Option<Arc<Process>> {
         self.processes.read().get(pid).cloned()
     } 
 
@@ -80,37 +84,37 @@ impl ProcessManager {
 
     pub fn save_current(&self, context: &ProcessContext) {
         // FIXME: update current process's tick count
-        let mut proc = self.current().write();
-        // .current()返回Arc<process>，.write() 获取写锁保护着的ProcessInner
+        let proc = self.current();
+        // .current()返回Arc<process>
         // 谨慎Process内定义的方法.write()的返回类型！
-        proc.tick(); // 调用ProcessInner的tick函数
+        // 需要.write() 获取写锁保护着的ProcessInner
+        proc.write().tick(); // 调用ProcessInner的tick函数
 
         // FIXME: save current process's context
-        proc.save(&context); // 调用ProcessInner的save函数
+        proc.write().save(context); // 调用ProcessInner的save函数
     }
 
     pub fn switch_next(&self, context: &mut ProcessContext) -> ProcessId {
-
-        // FIXME: fetch the next process from ready queue
-        let mut next_pid = self.pop_ready();
-        let mut next_proc = self.get_proc(&next_pid);
-        // FIXME: check if the next process is ready,
-        //        continue to fetch if not ready
         loop {
-            if next_proc.is_none() || next_proc.read().status() == ProgramStatus::Dead {
-                next_pid = self.pop_ready();
-                next_proc = self.get_proc(&next_pid);
-                // 检测是否取出进程为空 or 取出进程状态是否为已被杀死
-            } else {
-                break;
+            // FIXME: fetch the next process from ready queue
+
+            // FIXME: check if the next process is ready,
+            //        continue to fetch if not ready
+            let next_pid = self.pop_ready();
+            let next_proc = match self.get_proc(&next_pid) {
+                None => continue,
+                Some(proc) => proc,
+            };
+
+            if next_proc.read().is_ready() {
+                // FIXME: restore next process's context
+                next_proc.write().restore(context); // 调用ProcessInner中的restore()方法，将上下文写入context
+                // FIXME: update processor's current pid
+                processor::set_pid(next_pid); // 调用Processor中的set_pid方法
+                // FIXME: return next process's pid
+                return next_pid;
             }
         }
-        // FIXME: restore next process's context
-        next_proc.write().restore(&context); // 调用ProcessInner中的restore()方法，将上下文写入context
-        // FIXME: update processor's current pid
-        processor::set_pid(&next_pid); // 调用Processor中的set_pid方法
-        // FIXME: return next process's pid
-        return next_pid;
     }
 
     pub fn spawn_kernel_thread(
@@ -121,11 +125,12 @@ impl ProcessManager {
     ) -> ProcessId {
         let kproc = self.get_proc(&KERNEL_PID).unwrap(); // 获取内核进程
         let page_table = kproc.read().clone_page_table(); // 获取内核进程的页表
-        let proc_vm = Some(ProcessVm::new(page_table)); // 拷贝内科进程的页表
+        let proc_vm = Some(ProcessVm::new(page_table)); // 拷贝内核进程的页表
         let proc = Process::new(name, Some(Arc::downgrade(&kproc)), proc_vm, proc_data); // 复制内核进程，生成新的进程
 
         // alloc stack for the new process base on pid
-        let stack_top = proc.alloc_init_stack();
+        let stack_top = proc.alloc_init_stack(); // 最终调用ProcessVm中的 init_proc_stack
+        info!("the top of the stack is {:?}", stack_top);
 
         // FIXME: set the stack frame
         proc.write().init_stack_frame(entry, stack_top); // 调用ProcessContext中的方法 init_stack_frame
@@ -152,7 +157,8 @@ impl ProcessManager {
         } // 不是由于越权访问和写操作导致的 其他非预期错误 直接返回false
         self.current().write().handle_page_fault(addr) 
         // 调用ProcessInner中的相应缺页处理函数
-    }
+    } // 用于处理缺页异常的函数，在无法解决的情况下返回false，
+    // 可能解决的情况：调用ProcessInner中的 handle_page_fault 函数
 
     pub fn kill(&self, pid: ProcessId, ret: isize) {
         let proc = self.get_proc(&pid);
@@ -170,7 +176,7 @@ impl ProcessManager {
         }
 
         trace!("Kill {:#?}", &proc);
-
+        info!("ret = {}", ret);
         proc.kill(ret);
     }
 

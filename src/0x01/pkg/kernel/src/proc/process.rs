@@ -1,6 +1,7 @@
 use super::*;
 use crate::memory::*;
-use alloc::sync::Weak;
+use vm::*;
+use alloc::sync::{Weak, Arc};
 use alloc::vec::Vec;
 use spin::*;
 use x86_64::structures::paging::mapper::MapToError;
@@ -141,7 +142,10 @@ impl ProcessInner {
     /// mark the process as ready
     pub(super) fn save(&mut self, context: &ProcessContext) {
         // FIXME: save the process's context
-        self.context.save(&context); // 使用ProcessContext中定义的方法 save保存上下文
+        if self.status == ProgramStatus::Dead {
+            return ;
+        }
+        self.context.save(context); // 使用ProcessContext中定义的方法 save保存上下文
         self.pause(); // 调用方法pause()设置进程状态为 ready
     } // context中记录了原进程的上下文
 
@@ -149,7 +153,7 @@ impl ProcessInner {
     /// mark the process as running
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
         // FIXME: restore the process's context
-        self.context.restore(&context); // 同样调用对应结构体方法 restore写入上下文
+        self.context.restore(context); // 同样调用对应结构体方法 restore写入上下文
         
         // FIXME: restore the process's page table
         self.vm_mut().page_table.load();  // .vm_mut()得到ProcessVm, .load()调用对应PageTable方法加载上下文
@@ -165,7 +169,7 @@ impl ProcessInner {
         // FIXME: set exit code
         // 如果exit_code的值为None，表示进程尚未退出；为Some表示已经退出，并且获取到进程的返回值
         // 具体的进程的返回值是什么呢？
-        self.exit_code = Some(&ret);
+        self.exit_code = Some(ret);
         // FIXME: set status to dead
         self.status = ProgramStatus::Dead;
 
@@ -173,6 +177,10 @@ impl ProcessInner {
         // 使用Option提供的方法.take()，安全的取出并消费Option中的值
         self.proc_data.take();
         self.proc_vm.take();
+    }
+
+    pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
+        self.context.init_stack_frame(entry, stack_top);
     }
 }
 

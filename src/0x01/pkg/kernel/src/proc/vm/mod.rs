@@ -40,8 +40,10 @@ impl ProcessVm {
 
     pub fn init_proc_stack(&mut self, pid: ProcessId) -> VirtAddr {
         // FIXME: calculate the stack for pid
-        let stack_top_addr = STACK_INIT_TOP - STACK_MAX_SIZE * pid.0 as u64 ; // 计算对应用户栈栈顶地址
-        let stack_bot_addr = stack_top_addr - STACK_DEF_SIZE; 
+        info!("{:?}", STACK_INIT_TOP);
+        let stack_top_addr = STACK_INIT_TOP - STACK_MAX_SIZE * (pid.0 as u64 - 1) ; // 计算对应用户栈栈顶地址
+        let stack_bot_addr = STACK_INIT_BOT - STACK_MAX_SIZE * (pid.0 as u64 - 1) ;
+        info!("top {:?} bot {:?}", stack_top_addr, stack_bot_addr);
         // 默认用户栈分配大小为 STACK_DEF_SIZE
         // 计算对应的栈底物理地址
 

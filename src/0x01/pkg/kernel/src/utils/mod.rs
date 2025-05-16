@@ -1,9 +1,9 @@
 #[macro_use]
 mod macros;
 #[macro_use]
-mod regs;
+pub mod regs; // 在clock.rs中调用了regs.rs，所以在这里把它设为公开
 
-pub mod clock;
+use alloc::format;
 pub mod func;
 pub mod logger;
 
@@ -21,17 +21,18 @@ __  __      __  _____            ____  _____
  / / /_/ / /_ ___/ /  __/ / / / /_/ /___/ /
 /_/\__,_/\__//____/\___/_/ /_/\____//____/
 
+            姓名：周海铭    学号：23336345
                                        v",
         env!("CARGO_PKG_VERSION")
     )
 }
 
 pub fn new_test_thread(id: &str) -> ProcessId {
-    let proc_data = ProcessData::new();
+    let mut proc_data = ProcessData::new(); // 修改为可变变量
     proc_data.set_env("id", id);
 
     spawn_kernel_thread(
-        utils::func::test,
+        func::test, // 删去util::前缀 
         format!("#{}_test", id),
         Some(proc_data),
     )
@@ -39,7 +40,7 @@ pub fn new_test_thread(id: &str) -> ProcessId {
 
 pub fn new_stack_test_thread() {
     let pid = spawn_kernel_thread(
-        utils::func::stack_test,
+        func::stack_test, // 删去util::前缀
         alloc::string::String::from("stack"),
         None,
     );

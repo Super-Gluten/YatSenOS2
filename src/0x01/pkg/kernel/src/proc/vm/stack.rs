@@ -3,7 +3,6 @@ use x86_64::{
     VirtAddr,
 };
 
-
 use super::{FrameAllocatorRef, MapperRef};
 
 // 0xffff_ff00_0000_0000 is the kernel's address space
@@ -99,7 +98,6 @@ impl Stack {
             error!("Grow stack failed: {:?}", m);
             return false;
         } // 如果堆栈失败，则返回false
-
         true
     }
 
@@ -122,17 +120,25 @@ impl Stack {
 
         // FIXME: grow stack for page fault
         let aim_page = Page::<Size4KiB>::containing_address(addr); // 计算异常地址所在页面
-        let count_alloc = self.range.start - aim_page; // 计算需要增长的页面数量
-        let new_page = elf::map_range(addr, count_alloc, mapper, alloc)?; 
+        let count_alloc = (self.range.start - aim_page)
+            .try_into()
+            .expect("Failed to convert u64 to usize"); // 计算需要增长的页面数量
+        // let new_page = elf::map_range(addr.as_u64(), count_alloc, mapper, alloc)?; 
+        // 这里不能采用addr.as_u64()，而应该采用包含addr的页面的起始地址作为正确的u64传入
+        let new_page = elf::map_range(
+            aim_page.start_address().as_u64(), 
+            count_alloc, 
+            mapper, 
+            alloc
+        )?;
         // 调用elf/lib.rs中的map_range函数求得相应Page
-        
-        let new_start = new_page.start;
-        let new_end = self.range.end;
 
         self.usage += count_alloc; // 栈的页数使用量增加
-        self.range = Page::range(new_start, new_end); // 页的合并
+        self.range = Page::range(new_page.start, self.range.end); // 页的合并
 
-        info!("Grow Stack has done! Page with new start is {}, new end is {}, the usage is {}", self.range.start, self.range.end, self.usage);
+        // info!(
+        //     "Grow Stack: new start {:?}, end {:?}, usage {:?} pages", 
+        //     self.range.start, self.range.end, self.usage);
         
         Ok(())
     }

@@ -13,7 +13,7 @@ pub struct SerialPort {
 }
 
 impl SerialPort {
-    pub const fn new(port: u16) -> Self {
+    pub const fn new(_port: u16) -> Self {
         SerialPort {
             data: Port::new(PORT),
             interrupt_enable: Port::new(PORT + 1),

@@ -1,13 +1,16 @@
 mod context;
 mod data;
-mod manager;
+pub mod manager; // 因为在util/mod.rs中引用了proc::*，且需要manager
 mod paging;
 mod pid;
 mod process;
 mod processor;
+mod vm;
 
 use manager::*;
 use process::*;
+use vm::*;
+use processor::*; // 在switch函数中使用了proceeor相关的函数
 use crate::memory::PAGE_SIZE;
 
 use alloc::string::String;
@@ -52,13 +55,14 @@ pub fn switch(context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         // FIXME: switch to the next process
         //      - save current process's context
-        get_process_manager().save_current(context);
+        let manager = get_process_manager();
+        manager.save_current(context);
 
         //      - handle ready queue update
-        get_process_manager().push_ready(get_pid());
+        manager.push_ready(get_pid());
 
         //      - restore next process's context
-        get_process_manager().switch_next(context);
+        manager.switch_next(context);
         // 三个相关的函数功能见manager.rs对应函数
     });
 }
@@ -88,6 +92,7 @@ pub fn env(key: &str) -> Option<String> {
 pub fn process_exit(ret: isize) -> ! {
     x86_64::instructions::interrupts::without_interrupts(|| {
         get_process_manager().kill_current(ret);
+        info!("done killing");
     });
 
     loop {
