@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: Config = Config {
     physical_memory_offset: 0xFFFF_8000_0000_0000,
     kernel_path: "\\KERNEL.ELF",
     cmdline: "",
-    load_apps: false,
+    load_apps: true, // 根据0x04的要求，将load_apps 改为 true
 };
 
 impl<'a> Config<'a> {

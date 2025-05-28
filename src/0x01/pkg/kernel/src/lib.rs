@@ -46,7 +46,7 @@ pub fn init(boot_info: &'static BootInfo) {
     memory::gdt::init(); // init gdt
     memory::allocator::init(); // init kernel heap allocator
     interrupt::init(); // init interrupts
-    proc::init(); // init proc
+    proc::init(boot_info); // init proc
     memory::init(boot_info); // init memory manager
 
     x86_64::instructions::interrupts::enable();

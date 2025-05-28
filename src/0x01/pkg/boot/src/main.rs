@@ -53,6 +53,15 @@ fn efi_main() -> Status {
         ElfFile::new(buf).unwrap()
     };
 
+    // 0x04 加载用户程序
+    let apps = if config.load_apps {
+        info!("Loading apps...");
+        Some(load_apps())
+    } else {
+        info!("Skip loading apps");
+        None
+    };
+
     unsafe {
         set_entry(elf.header.pt2.entry_point() as usize);
     }
@@ -129,6 +138,7 @@ fn efi_main() -> Status {
         memory_map: mmap.entries().copied().collect(),
         physical_memory_offset: config.physical_memory_offset,
         system_table,
+        loaded_apps : apps, // 0x04 将上文加载的用户程序信息传递给内核
     };
 
     // align stack to 8 bytes

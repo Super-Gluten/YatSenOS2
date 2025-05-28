@@ -4,3 +4,6 @@ target = "config/x86_64-unknown-ysos.json"
 [unstable]
 build-std-features = ["compiler-builtins-mem"]
 build-std = ["core", "compiler_builtins", "alloc"]
+
+[dependencies]
+lib = { workspace = true } # 用户态库被定义在 pkg/lib 中，引用用户态库

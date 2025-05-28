@@ -11,7 +11,7 @@ use core::ops::DerefMut;
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
-pub fn init(init: Arc<Process>) {
+pub fn init(init: Arc<Process>, apps: boot::AppListRef) {
     // 传入了一个Arc，且引用process
 
     // FIXME: set init process as Running
@@ -23,7 +23,7 @@ pub fn init(init: Arc<Process>) {
     // FIXME: set processor's current pid to init's pid
     // 调用processor.rs中的可用接口set_pid
     processor::set_pid(init.pid()); 
-    PROCESS_MANAGER.call_once(|| ProcessManager::new(init));
+    PROCESS_MANAGER.call_once(|| ProcessManager::new(init, apps));
 }
 
 pub fn get_process_manager() -> &'static ProcessManager {
@@ -35,10 +35,11 @@ pub fn get_process_manager() -> &'static ProcessManager {
 pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>, // 用读写锁保护的进程键值对
     ready_queue: Mutex<VecDeque<ProcessId>>, // 用于进程管理的双端队列
+    app_list: boot::AppListRef, // 0x04: 采用boot/lib.rs中定义的Option<&AppList>
 }
 
 impl ProcessManager {
-    pub fn new(init: Arc<Process>) -> Self {
+    pub fn new(init: Arc<Process>, apps: boot::AppListRef ) -> Self {
         let mut processes = BTreeMap::new();
         let ready_queue = VecDeque::new();
         let pid = init.pid();
@@ -49,7 +50,13 @@ impl ProcessManager {
         Self {
             processes: RwLock::new(processes),
             ready_queue: Mutex::new(ready_queue),
+            app_list: apps
         }
+    }
+
+    #[inline]
+    pub fn app_list(&self) -> boot::AppListRef{
+        self.app_list
     }
 
     #[inline]
