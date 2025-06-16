@@ -53,8 +53,13 @@ impl ProcessContext {
             RFlags::IOPL_HIGH | RFlags::IOPL_LOW | RFlags::INTERRUPT_FLAG;
 
         let selector = get_selector();
-        self.value.stack_frame.code_segment = selector.code_selector;
-        self.value.stack_frame.stack_segment = selector.data_selector;
+        // 0x04 cancel: 获取的选择子变为了用户选择子
+        // self.value.stack_frame.code_segment = selector.code_selector;
+        // self.value.stack_frame.stack_segment = selector.data_selector;
+
+        // 0x04 add:
+        self.value.stack_frame.code_segment = selector.user_code_selector;
+        self.value.stack_frame.stack_segment = selector.user_data_selector;
 
         trace!("Init stack frame: {:#?}", &self.stack_frame);
     }

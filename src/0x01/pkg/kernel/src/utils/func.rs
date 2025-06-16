@@ -34,7 +34,7 @@ fn huge_stack() {
     }
 } // 用于测试栈的分配（栈是否大小足够且访问正确）
 
-pub fn stack_test() -> ! {
-    huge_stack();
-    crate::proc::process_exit(0)
-}
+// pub fn stack_test() -> ! {
+//     huge_stack();
+//     crate::proc::process_exit(0)
+// } // 0x03 delete

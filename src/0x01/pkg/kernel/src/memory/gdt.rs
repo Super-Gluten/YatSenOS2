@@ -8,8 +8,9 @@ use x86_64::structures::tss::TaskStateSegment;
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 pub const CLOCK_IST_INDEX: u16 = 2;
+pub const SYSCALL_IST_INDEX: u16 = 3; // 0x04 add: 为系统调用设置独立的中断栈
 
-pub const IST_SIZES: [usize; 4] = [0x1000, 0x1000, 0x1000, 0x1000];
+pub const IST_SIZES: [usize; 5] = [0x1000, 0x1000, 0x1000, 0x1000, 0x1000];
 
 lazy_static! {
     static ref TSS: TaskStateSegment = {
@@ -80,16 +81,34 @@ lazy_static! {
             stack_end
         };
 
+        tss.interrupt_stack_table[SYSCALL_IST_INDEX as usize] = {
+            const STACK_SIZE: usize = IST_SIZES[4];
+            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+            let stack_start = VirtAddr::from_ptr(addr_of_mut!(STACK));
+            let stack_end = stack_start + STACK_SIZE as u64;
+            info!(
+                "Syscall Interrupt Stack  : 0x{:016x}-0x{:016x}",
+                stack_start.as_u64(),
+                stack_end.as_u64()
+            );
+            stack_end
+        }; // 0x04 add: 为系统调用设置独立的中断栈
+
         tss
     };
 }
 
 lazy_static! {
-    static ref GDT: (GlobalDescriptorTable, KernelSelectors) = {
+    static ref GDT: (GlobalDescriptorTable, KernelSelectors, UserSelectors) = {
         let mut gdt = GlobalDescriptorTable::new();
         let code_selector = gdt.append(Descriptor::kernel_code_segment());
         let data_selector = gdt.append(Descriptor::kernel_data_segment());
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
+        
+        // 0x04 add
+        let user_code_selector = gdt.append(Descriptor::user_code_segment());
+        let user_data_selector = gdt.append(Descriptor::user_data_segment());
+
         (
             gdt,
             KernelSelectors {
@@ -97,6 +116,10 @@ lazy_static! {
                 data_selector,
                 tss_selector,
             },
+            UserSelectors { // 0x04 add
+                user_code_selector,
+                user_data_selector
+            }
         )
     };
 }
@@ -106,6 +129,13 @@ pub struct KernelSelectors {
     pub code_selector: SegmentSelector,
     pub data_selector: SegmentSelector,
     tss_selector: SegmentSelector,
+}
+
+// 0x04 add
+#[derive(Debug)]
+pub struct UserSelectors {
+    pub user_code_selector: SegmentSelector,
+    pub user_data_selector: SegmentSelector
 }
 
 pub fn init() {
@@ -136,9 +166,13 @@ pub fn init() {
     info!("GDT Initialized.");
 }
 
-pub fn get_selector() -> &'static KernelSelectors {
-    &GDT.1
-}
+// pub fn get_selector() -> &'static KernelSelectors {
+//     &GDT.1
+// } // 0x04 cancel: 用户进程采用用户选择子，而不再是复制内核了
+
+pub fn get_selector() -> &'static UserSelectors {
+    &GDT.2
+} // 0x04 add: 返回用户进程选择子
 
 pub fn get_gdt() -> Option<&'static GlobalDescriptorTable> {
     Some(&GDT.0)

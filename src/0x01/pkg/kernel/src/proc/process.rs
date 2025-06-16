@@ -8,6 +8,8 @@ use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::*;
 
+use xmas_elf::ElfFile;
+
 #[derive(Clone)]
 pub struct Process {
     pid: ProcessId,
@@ -142,7 +144,7 @@ impl ProcessInner {
     /// mark the process as ready
     pub(super) fn save(&mut self, context: &ProcessContext) {
         // FIXME: save the process's context
-        if self.status == ProgramStatus::Dead {
+        if self.is_dead() {
             return ;
         }
         self.context.save(context); // 使用ProcessContext中定义的方法 save保存上下文
@@ -181,6 +183,14 @@ impl ProcessInner {
 
     pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.context.init_stack_frame(entry, stack_top);
+    }
+
+    pub fn load_elf(&mut self, elf: &ElfFile) {
+        self.vm_mut().load_elf(elf); // 调用ProcessVm中的load_elf()方法
+    }
+
+    pub fn is_dead(&self) -> bool {
+        self.status == ProgramStatus::Dead
     }
 }
 

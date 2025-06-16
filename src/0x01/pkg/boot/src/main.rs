@@ -103,6 +103,7 @@ fn efi_main() -> Status {
         config.physical_memory_offset,
         &mut page_table,
         &mut frame_allocator,
+        false // 0x04 add: 随着elf/lib.rs中的load_elf()改变，内核进程应为false
     );
 
     // FIXME: map kernel stack

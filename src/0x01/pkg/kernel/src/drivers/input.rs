@@ -12,7 +12,7 @@ use alloc::vec::Vec;
 //     RawKey(KeyCode), // 无法映射为Unicode的特殊键
 // }
 pub type Key = DecodedKey;
-// 自定义缓冲区大小为128
+// 自定义内核缓冲区大小为128
 const BUFFER_SIZE: usize = 128;
 
 // 确保初始化（调试用）

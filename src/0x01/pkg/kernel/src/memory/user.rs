@@ -26,11 +26,35 @@ pub fn init_user_heap() -> Result<(), MapToError<Size4KiB>> {
     // FIXME: use elf::map_range to allocate & map
     //        frames (R/W/User Access)
 
+    let user_heap_start = VirtAddr::new(USER_HEAP_START as u64);
+    let user_heap_end = user_heap_start + USER_HEAP_SIZE as u64;
+
+    elf::user_map_range(
+        USER_HEAP_START as u64,
+        USER_HEAP_PAGE as u64,
+        mapper,
+        frame_allocator,
+    );
+
     unsafe {
         USER_ALLOCATOR
             .lock()
             .init(USER_HEAP_START as *mut u8, USER_HEAP_SIZE);
     }
 
+    debug!(
+        "User Heap      : 0x{:016x}-0x{:016x}",
+        user_heap_start.as_u64(),
+        user_heap_end.as_u64()
+    );
+
+    let (size, unit) = crate::humanized_size(USER_HEAP_SIZE as u64);
+    info!("User Heap Size : {:>7.*} {}", 3, size, unit);
+
+    info!("User Heap Initialized.");
+
     Ok(())
 }
+// 根据 elf/lib.rs map_range()
+// 新定义了一个user_map_range() in elf/lib.rs；
+// 整体init_user_heap() 结构仿照memory/allocator.rs中的init()

@@ -12,6 +12,8 @@ use self::stack::*;
 
 use super::{PageTableContext, ProcessId};
 
+use xmas_elf::ElfFile;
+
 type MapperRef<'a> = &'a mut OffsetPageTable<'static>;
 type FrameAllocatorRef<'a> = &'a mut BootInfoFrameAllocator;
 
@@ -71,6 +73,22 @@ impl ProcessVm {
 
     pub(super) fn memory_usage(&self) -> u64 {
         self.stack.memory_usage()
+    }
+
+    pub fn load_elf(&mut self, elf: &ElfFile) {
+        let mapper = &mut self.page_table.mapper();
+        let alloc = &mut *get_frame_alloc_for_sure();
+
+        self.stack.init(mapper, alloc);
+
+        // FIXME: load elf to process pagetable
+        elf::load_elf(
+            elf,
+            *PHYSICAL_OFFSET.get().clone().unwrap(), // 克隆内核的地址偏移量
+            mapper,
+            alloc,
+            true // 因为调用本函数的都是用户进程，所以user_access都是true
+        ).unwrap();
     }
 }
 

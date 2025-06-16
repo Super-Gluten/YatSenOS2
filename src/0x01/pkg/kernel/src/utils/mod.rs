@@ -6,6 +6,7 @@ pub mod regs; // 在clock.rs中调用了regs.rs，所以在这里把它设为公
 use alloc::format;
 pub mod func;
 pub mod logger;
+pub mod resource;
 
 pub use macros::*;
 pub use regs::*;
@@ -27,44 +28,44 @@ __  __      __  _____            ____  _____
     )
 }
 
-pub fn new_test_thread(id: &str) -> ProcessId {
-    let mut proc_data = ProcessData::new(); // 修改为可变变量
-    proc_data.set_env("id", id);
+// pub fn new_test_thread(id: &str) -> ProcessId {
+//     let mut proc_data = ProcessData::new(); // 修改为可变变量
+//     proc_data.set_env("id", id);
 
-    spawn_kernel_thread(
-        func::test, // 删去util::前缀 
-        format!("#{}_test", id),
-        Some(proc_data),
-    )
-}
+//     spawn_kernel_thread(
+//         func::test, // 删去util::前缀 
+//         format!("#{}_test", id),
+//         Some(proc_data),
+//     )
+// } // 0x03 add, 0x04 delete
 
-pub fn new_stack_test_thread() {
-    let pid = spawn_kernel_thread(
-        func::stack_test, // 删去util::前缀
-        alloc::string::String::from("stack"),
-        None,
-    );
+// pub fn new_stack_test_thread() {
+//     let pid = spawn_kernel_thread(
+//         func::stack_test, // 删去util::前缀
+//         alloc::string::String::from("stack"),
+//         None,
+//     );
 
-    // wait for progress exit
-    wait(pid); // 阻塞等待测试完成
-}
+//     // wait for progress exit
+//     wait(pid); // 阻塞等待测试完成
+// } // 0x03 add, 0x04 delete
 
-fn wait(pid: ProcessId) {
-    loop {
-        // FIXME: try to get the status of the process
-        // let status = manager::get_process_manager().get_proc(pid).read().status();
-        // if status == ProgramStatus::Dead 
+// fn wait(pid: ProcessId) {
+//     loop {
+//         // FIXME: try to get the status of the process
+//         // let status = manager::get_process_manager().get_proc(pid).read().status();
+//         // if status == ProgramStatus::Dead 
         
-        // HINT: it's better to use the exit code
-        let exit_code = manager::get_process_manager().get_proc(&pid).unwrap().read().exit_code();
-         /* FIXME: is the process exited? */ 
-        if exit_code.is_none() {
-            x86_64::instructions::hlt();
-        } else {
-            break;
-        }
-    }
-}
+//         // HINT: it's better to use the exit code
+//         let exit_code = manager::get_process_manager().get_proc(&pid).unwrap().read().exit_code();
+//          /* FIXME: is the process exited? */ 
+//         if exit_code.is_none() {
+//             x86_64::instructions::hlt();
+//         } else {
+//             break;
+//         }
+//     }
+// }// 0x03 add, 0x04 delete
 
 const SHORT_UNITS: [&str; 4] = ["B", "K", "M", "G"];
 const UNITS: [&str; 4] = ["B", "KiB", "MiB", "GiB"];

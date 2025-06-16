@@ -9,6 +9,8 @@ use spin::{Mutex, RwLock};
 use vm::*;
 use core::ops::DerefMut;
 
+use xmas_elf::ElfFile;
+
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
 pub fn init(init: Arc<Process>, apps: boot::AppListRef) {
@@ -124,32 +126,32 @@ impl ProcessManager {
         }
     }
 
-    pub fn spawn_kernel_thread(
-        &self,
-        entry: VirtAddr,
-        name: String,
-        proc_data: Option<ProcessData>,
-    ) -> ProcessId {
-        let kproc = self.get_proc(&KERNEL_PID).unwrap(); // 获取内核进程
-        let page_table = kproc.read().clone_page_table(); // 获取内核进程的页表
-        let proc_vm = Some(ProcessVm::new(page_table)); // 拷贝内核进程的页表
-        let proc = Process::new(name, Some(Arc::downgrade(&kproc)), proc_vm, proc_data); // 复制内核进程，生成新的进程
+    // pub fn spawn_kernel_thread(
+    //     &self,
+    //     entry: VirtAddr,
+    //     name: String,
+    //     proc_data: Option<ProcessData>,
+    // ) -> ProcessId {
+    //     let kproc = self.get_proc(&KERNEL_PID).unwrap(); // 获取内核进程
+    //     let page_table = kproc.read().clone_page_table(); // 获取内核进程的页表
+    //     let proc_vm = Some(ProcessVm::new(page_table)); // 拷贝内核进程的页表
+    //     let proc = Process::new(name, Some(Arc::downgrade(&kproc)), proc_vm, proc_data); // 复制内核进程，生成新的进程
 
-        // alloc stack for the new process base on pid
-        let stack_top = proc.alloc_init_stack(); // 最终调用ProcessVm中的 init_proc_stack
-        info!("the top of the stack is {:?}", stack_top);
+    //     // alloc stack for the new process base on pid
+    //     let stack_top = proc.alloc_init_stack(); // 最终调用ProcessVm中的 init_proc_stack
+    //     info!("the top of the stack is {:?}", stack_top);
 
-        // FIXME: set the stack frame
-        proc.write().init_stack_frame(entry, stack_top); // 调用ProcessContext中的方法 init_stack_frame
+    //     // FIXME: set the stack frame
+    //     proc.write().init_stack_frame(entry, stack_top); // 调用ProcessContext中的方法 init_stack_frame
 
-        // FIXME: add to process map
-        let pid = proc.pid();
-        self.add_proc(pid, proc); // 调用ProcessManager中的方法 add_proc
-        // FIXME: push to ready queue
-        self.push_ready(pid); // 调用ProcessManager中的方法 push_ready
-        // FIXME: return new process pid
-        pid
-    }
+    //     // FIXME: add to process map
+    //     let pid = proc.pid();
+    //     self.add_proc(pid, proc); // 调用ProcessManager中的方法 add_proc
+    //     // FIXME: push to ready queue
+    //     self.push_ready(pid); // 调用ProcessManager中的方法 push_ready
+    //     // FIXME: return new process pid
+    //     pid
+    // } // 0x03 add, 0x04 delete
 
     pub fn kill_current(&self, ret: isize) {
         self.kill(processor::get_pid(), ret);
@@ -206,5 +208,49 @@ impl ProcessManager {
         output += &processor::print_processors();
 
         print!("{}", output);
+    }
+
+
+    // 0x04 add
+    pub fn spawn(
+        &self,
+        elf: &ElfFile,
+        name: String,
+        parent: Option<Weak<Process>>,
+        proc_data: Option<ProcessData>,
+    ) -> ProcessId {
+        let kproc = self.get_proc(&KERNEL_PID).unwrap();
+        let page_table = kproc.read().clone_page_table();
+        let proc_vm = Some(ProcessVm::new(page_table));
+        let proc = Process::new(name, parent, proc_vm, proc_data);
+
+        let mut inner = proc.write();
+        // FIXME: load elf to process pagetable
+        inner.load_elf(elf); // 调用ProcessInner中的load_elf()
+        // FIXME: alloc new stack for process
+        let stack_top = proc.alloc_init_stack();
+        let entry = VirtAddr::new(elf.header.pt2.entry_point());
+        inner.init_stack_frame(entry, stack_top); 
+        // FIXME: mark process as ready
+        inner.pause();
+        drop(inner);
+
+        trace!("New {:#?}", &proc);
+
+        let pid = proc.pid();
+        // FIXME: something like kernel thread
+        self.add_proc(pid, proc);
+        self.push_ready(pid);
+        pid
+    }
+
+    #[inline]
+    pub fn write(&self, fd: u8, buf: &[u8]) -> isize{
+        self.current().write().write(fd, buf)
+    }
+
+    #[inline]
+    pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize{
+        self.current().read().read(fd, buf)
     }
 }
