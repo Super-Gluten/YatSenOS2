@@ -227,9 +227,12 @@ impl ProcessManager {
         let mut inner = proc.write();
         // FIXME: load elf to process pagetable
         inner.load_elf(elf); // 调用ProcessInner中的load_elf()
+        drop(inner);
         // FIXME: alloc new stack for process
         let stack_top = proc.alloc_init_stack();
         let entry = VirtAddr::new(elf.header.pt2.entry_point());
+
+        let mut inner = proc.write();
         inner.init_stack_frame(entry, stack_top); 
         // FIXME: mark process as ready
         inner.pause();
