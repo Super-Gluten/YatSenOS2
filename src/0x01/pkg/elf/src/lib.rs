@@ -7,8 +7,8 @@ use core::ptr::{copy_nonoverlapping, write_bytes};
 
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::{mapper::*, *};
-use x86_64::{align_up, PhysAddr, VirtAddr};
-use xmas_elf::{program, ElfFile};
+use x86_64::{PhysAddr, VirtAddr, align_up};
+use xmas_elf::{ElfFile, program};
 
 /// Map physical memory
 ///
@@ -55,7 +55,7 @@ pub fn map_range(
 
     // default flags for stack
     let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-
+    
     for page in Page::range(range_start, range_end) {
         let frame = frame_allocator
             .allocate_frame()
@@ -87,6 +87,7 @@ pub fn load_elf(
     physical_offset: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    user_access: bool // 0x04 add
 ) -> Result<(), MapToError<Size4KiB>> {
     trace!("Loading ELF file...{:?}", elf.input.as_ptr());
 
@@ -95,13 +96,7 @@ pub fn load_elf(
             continue;
         }
 
-        load_segment(
-            elf,
-            physical_offset,
-            &segment,
-            page_table,
-            frame_allocator,
-        )?
+        load_segment(elf, physical_offset, &segment, page_table, frame_allocator, user_access)?
     }
 
     Ok(())
@@ -116,6 +111,7 @@ fn load_segment(
     segment: &program::ProgramHeader,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    user_access: bool // 0x04 add: 用于判断是否需要添加USER_ACCESSIBLE标志
 ) -> Result<(), MapToError<Size4KiB>> {
     trace!("Loading & mapping segment: {:#x?}", segment);
 
@@ -131,7 +127,7 @@ fn load_segment(
     // unimplemented!("Handle page table flags with segment flags!");
     // 关于PageTableFlags的相关信息可在 https://os.phil-opp.com/zh-CN/paging-introduction/#di-zhi-zhuan-huan-fan-li 中找到
     // 处理写权限，ELF 可写 -> 页表WRITALBE标志 -> 页表可写
-    if segment.flags().is_write() { 
+    if segment.flags().is_write() {
         page_table_flags |= PageTableFlags::WRITABLE;
     }
 
@@ -139,9 +135,14 @@ fn load_segment(
     if !segment.flags().is_execute() {
         page_table_flags |= PageTableFlags::NO_EXECUTE
     }
-    
-    // 默认设置允许用户空间访问
-    page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
+
+    // // 默认设置允许用户空间访问
+    // page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
+
+    // 0x04 add: 根据load_elf的参数决定页表是否添加USER_ACCESSIBLE标志位
+    if user_access {
+        page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
+    }
 
     trace!("Segment page table flag: {:?}", page_table_flags);
 
@@ -220,4 +221,51 @@ fn load_segment(
     }
 
     Ok(())
+}
+
+// 0x04 add 自定义函数：用于创建用户态堆且不改变原有map_range
+/// Map a range of memory for user heap
+///
+/// allocate frames and map to specified address (R/W)
+pub fn user_map_range(
+    addr: u64,
+    count: u64,
+    page_table: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> Result<PageRange, MapToError<Size4KiB>> {
+    let range_start = Page::containing_address(VirtAddr::new(addr));
+    let range_end = range_start + count;
+
+    trace!(
+        "Page Range: {:?}({})",
+        Page::range(range_start, range_end),
+        count
+    );
+
+    let flags = PageTableFlags::PRESENT 
+        | PageTableFlags::WRITABLE
+        | PageTableFlags::USER_ACCESSIBLE
+        | PageTableFlags::NO_EXECUTE;
+
+    for page in Page::range(range_start, range_end) {
+        let frame = frame_allocator
+            .allocate_frame()
+            .ok_or(MapToError::FrameAllocationFailed)?;
+        unsafe {
+            page_table
+                .map_to(page, frame, flags, frame_allocator)?
+                .flush();
+        }
+    }
+
+    trace!(
+        "Map hint: {:#x} -> {:#x}",
+        addr,
+        page_table
+            .translate_page(range_start)
+            .unwrap()
+            .start_address()
+    );
+
+    Ok(Page::range(range_start, range_end))
 }

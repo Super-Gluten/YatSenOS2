@@ -1,4 +1,4 @@
-use log::{Metadata, Record, Level, LevelFilter};
+use log::{Level, LevelFilter, Metadata, Record};
 
 pub fn init() {
     static LOGGER: Logger = Logger;
@@ -10,13 +10,16 @@ pub fn init() {
     #[cfg(debug_assertions)]
     log::set_max_level(LevelFilter::Trace);
 
+
     // 在release构建中，暂时也使用Trace记录包含详细调试信息的所有日志
     #[cfg(not(debug_assertions))]
     log::set_max_level(LevelFilter::Trace);
 
-    // // 在release构建中，只使用info记录重要日志
-    // #[cfg(not(debug_assertions))]
-    // log::set_max_level(LevelFilter::Info);
+    // 在release构建中，只使用info记录重要日志
+    // 在release构建中，暂时用trace记录包含详细调试信息的所有日志
+    #[cfg(not(debug_assertions))]
+    log::set_max_level(LevelFilter::Trace);
+
 
     // 输出日志系统初始化成功的消息
     info!("Logger Initialized.");
@@ -32,13 +35,13 @@ impl log::Log for Logger {
 
     fn log(&self, record: &Record) {
         // FIXME: Implement the logger with serial output
-        
-        // 使用self.enabled(record.metadata()) 
+
+        // 使用self.enabled(record.metadata())
         // 来判断当前日志是否需要输出
         if !self.enabled(record.metadata()) {
-            return ;
+            return;
         }
-        
+
         mod colors {
             pub const RED: &str = "\x1b[31m";
             pub const YELLOW: &str = "\x1b[33m";
@@ -49,19 +52,19 @@ impl log::Log for Logger {
         }
 
         let color_code = match record.level() {
-            log::Level::Error => colors::RED ,
-            log::Level::Warn => colors::YELLOW ,
-            log::Level::Info => colors::GREEN ,
-            log::Level::Debug => colors::DYAN ,
-            log::Level::Trace => colors::WHITE ,
+            log::Level::Error => colors::RED,
+            log::Level::Warn => colors::YELLOW,
+            log::Level::Info => colors::GREEN,
+            log::Level::Debug => colors::DYAN,
+            log::Level::Trace => colors::WHITE,
         };
-        let reset_code = colors::RESET ;
+        let reset_code = colors::RESET;
 
         // 使用reco.file_static()和record.line()
         // 获取源文件的位置信息
 
         // println!格式为：[时间][级别名称][位置][模块]
-        println!{
+        println! {
             "{}{:5}{} [{}{}][{}] {}",
             reset_code,
             record.level(),

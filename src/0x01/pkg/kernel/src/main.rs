@@ -1,24 +1,23 @@
 #![no_std]
 #![no_main]
 
-#[macro_use]
-extern crate log;
-
-use core::arch::asm;
+use ysos::*;
 use ysos_kernel as ysos;
+
+extern crate alloc;
 
 boot::entry_point!(kernel_main);
 
 pub fn kernel_main(boot_info: &'static boot::BootInfo) -> ! {
     ysos::init(boot_info);
+    ysos::wait(spawn_init());
+    ysos::shutdown();
+}
 
-    loop {
-        info!("Hello World from YatSenOS v2!");
+pub fn spawn_init() -> proc::ProcessId {
+    // NOTE: you may want to clear the screen before starting the shell
+    // print!("\x1b[1;1H\x1b[2J");
 
-        for _ in 0..0x10000000 {
-            unsafe {
-                asm!("nop");
-            }
-        }
-    }
+    proc::list_app();
+    proc::spawn("sh").unwrap()
 }

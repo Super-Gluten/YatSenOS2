@@ -1,16 +1,18 @@
 #![no_std]
 
+pub use uefi::Status;
 pub use uefi::boot::{MemoryAttribute, MemoryDescriptor, MemoryType};
 pub use uefi::data_types::chars::*;
 pub use uefi::data_types::*;
 pub use uefi::proto::console::gop::{GraphicsOutput, ModeInfo};
-pub use uefi::Status;
 
-use arrayvec::ArrayVec;
 use core::ptr::NonNull;
+use x86_64::VirtAddr;
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
-use x86_64::VirtAddr;
+
+use arrayvec::{ArrayString, ArrayVec}; // 0x04新增App结构体
+use xmas_elf::ElfFile; // 0x04 新使用的ElfFile
 
 pub mod allocator;
 pub mod config;
@@ -24,6 +26,19 @@ extern crate log;
 
 pub type MemoryMap = ArrayVec<MemoryDescriptor, 256>;
 
+
+/// App information
+pub struct App { // 删除了App类型的生命周期
+    /// The name of app
+    pub name: ArrayString<16>,
+    /// The ELF file
+    pub elf: ElfFile<'static>, // 直接使用'static替换'a，声明ElfFiles为静态
+} 
+
+pub const MAX_LIST_APP: usize = 16; // 使用const指定用户程序数组的最大长度，类型为usize
+pub type AppList = ArrayVec<App, MAX_LIST_APP>;
+pub type AppListRef = Option<&'static AppList> ; // .as_ref()返回Option<&T>
+
 /// This structure represents the information that the bootloader passes to the kernel.
 pub struct BootInfo {
     /// The memory map
@@ -34,6 +49,9 @@ pub struct BootInfo {
 
     /// The system table virtual address
     pub system_table: NonNull<core::ffi::c_void>,
+
+    /// Loaded apps
+    pub loaded_apps: Option<AppList>, // 0x04 add
 }
 
 /// Get current page table from CR3
