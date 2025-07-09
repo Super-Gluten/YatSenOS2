@@ -8,7 +8,6 @@ edition.workspace = true
 boot = { workspace = true }
 lazy_static = { workspace = true }
 uefi = { workspace = true }
-crossbeam-queue = { workspace = true }
 paste = { workspace = true }
 spin = { workspace = true }
 x86 = { workspace = true }
@@ -18,3 +17,5 @@ bitflags = { workspace = true }
 bit_field = { workspace = true }
 libm = { workspace = true }
 linked_list_allocator = { workspace = true }
+crossbeam-queue = { version = "0.3", default-features = false, features = ["alloc"] }
+pc-keyboard = "0.8.0"

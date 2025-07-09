@@ -18,7 +18,6 @@ __  __      __  _____            ____  _____
     )
 }
 
-
 const SHORT_UNITS: [&str; 4] = ["B", "K", "M", "G"];
 const UNITS: [&str; 4] = ["B", "KiB", "MiB", "GiB"];
 
