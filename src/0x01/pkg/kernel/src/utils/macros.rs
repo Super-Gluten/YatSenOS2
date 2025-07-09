@@ -64,11 +64,9 @@ pub fn print_internal(args: Arguments) {
 }
 
 #[allow(dead_code)]
-#[cfg_attr(target_os = "none", panic_handler)]
+#[cfg_attr(not(test), panic_handler)]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    // force unlock serial for panic output
-    unsafe { SERIAL.get().unwrap().force_unlock() };
-
+    unsafe{SERIAL.get().unwrap().force_unlock()};
     error!("ERROR: panic!\n\n{:#?}", info);
     loop {}
 }
