@@ -115,6 +115,7 @@ fn efi_main() -> Status {
         stack_size,
         &mut page_table,
         &mut frame_allocator,
+        false,
     );
 
     // FIXME: recover write protect (Cr0)

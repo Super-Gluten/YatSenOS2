@@ -77,13 +77,6 @@ pub fn switch(context: &mut ProcessContext) {
     });
 }
 
-// pub fn spawn_kernel_thread(entry: fn() -> !, name: String, data: Option<ProcessData>) -> ProcessId {
-//     x86_64::instructions::interrupts::without_interrupts(|| {
-//         let entry = VirtAddr::new(entry as usize as u64);
-//         get_process_manager().spawn_kernel_thread(entry, name, data)
-//     })
-// } // 0x03 add, 0x04 delete
-
 pub fn print_process_list() {
     x86_64::instructions::interrupts::without_interrupts(|| {
         get_process_manager().print_process_list();
@@ -98,17 +91,6 @@ pub fn env(key: &str) -> Option<String> {
         // 最后使用ProcessData中定义的方法env
     })
 }
-
-// pub fn process_exit(ret: isize) -> ! {
-//     x86_64::instructions::interrupts::without_interrupts(|| {
-//         get_process_manager().kill_current(ret);
-//         info!("done killing");
-//     });
-
-//     loop {
-//         x86_64::instructions::hlt();
-//     }
-// } // 0x04 delete && update:
 
 pub fn process_exit(ret: isize, context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
@@ -189,12 +171,21 @@ pub fn write(fd: u8, buf: &[u8]) -> isize {
     x86_64::instructions::interrupts::without_interrupts(|| get_process_manager().write(fd, buf))
 }
 
+pub fn exit(ret: isize, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        // FIXME: implement this for ProcessManager
+        manager.kill_current(ret);
+        manager.switch_next(context);
+    })
+}
+
 #[inline]
 pub fn still_alive(pid: ProcessId) -> bool {
     x86_64::instructions::interrupts::without_interrupts(|| {
         // check if the process is still alive
         match get_process_manager().get_proc(&pid){
-            Some(proc) => proc.read().is_dead(),
+            Some(proc) => !proc.read().is_dead(),
             None => return false,
         }
     })

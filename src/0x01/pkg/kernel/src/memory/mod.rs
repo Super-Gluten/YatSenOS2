@@ -35,6 +35,6 @@ pub fn init(boot_info: &'static boot::BootInfo) {
             usable_mem_size as usize,
         ));
     }
-
+    user::init();
     info!("Frame Allocator initialized.");
 }

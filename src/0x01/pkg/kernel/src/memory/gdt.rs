@@ -166,11 +166,11 @@ pub fn init() {
     info!("GDT Initialized.");
 }
 
-// pub fn get_selector() -> &'static KernelSelectors {
-//     &GDT.1
-// } // 0x04 cancel: 用户进程采用用户选择子，而不再是复制内核了
+pub fn get_selector() -> &'static KernelSelectors {
+    &GDT.1
+}
 
-pub fn get_selector() -> &'static UserSelectors {
+pub fn get_user_selector() -> &'static UserSelectors {
     &GDT.2
 } // 0x04 add: 返回用户进程选择子
 

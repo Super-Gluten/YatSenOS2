@@ -36,7 +36,6 @@ impl ProcessVm {
     pub fn init_kernel_vm(mut self) -> Self {
         // TODO: record kernel code usage
         self.stack = Stack::kstack();
-        info!("{}", self.stack.memory_usage()); // 打印内核栈的内存大小
         self
     }
 
@@ -56,7 +55,7 @@ impl ProcessVm {
 
         let page_table = &mut self.page_table.mapper(); // 获取能够传递给elf::map_range 函数的page_table参数
         let frame_alloc = &mut *get_frame_alloc_for_sure(); // 获取能够传递给elf::map_range 函数的frame_alloc参数
-        elf::map_range(stack_bot_addr, STACK_DEF_PAGE, page_table, frame_alloc).unwrap(); 
+        elf::map_range(stack_bot_addr, STACK_DEF_PAGE, page_table, frame_alloc, true).unwrap(); 
         // 这里一定要注意！因为map_range中，传入的addr是较小的那个，所以因为用户栈是向下增长，
         // 即栈顶地址大于栈底，所以这里应该传入stack_bot_addr
         // 第二项参数为用户栈默认页数，实际为1
@@ -74,21 +73,20 @@ impl ProcessVm {
     pub(super) fn memory_usage(&self) -> u64 {
         self.stack.memory_usage()
     }
-
     pub fn load_elf(&mut self, elf: &ElfFile) {
         let mapper = &mut self.page_table.mapper();
         let alloc = &mut *get_frame_alloc_for_sure();
 
-        self.stack.init(mapper, alloc);
-
         // FIXME: load elf to process pagetable
         elf::load_elf(
             elf,
-            *PHYSICAL_OFFSET.get().clone().unwrap(), // 克隆内核的地址偏移量
+            *PHYSICAL_OFFSET.get().unwrap(), // 克隆内核的地址偏移量
             mapper,
             alloc,
             true // 因为调用本函数的都是用户进程，所以user_access都是true
         ).unwrap();
+
+        self.stack.init(mapper, alloc);
     }
 }
 

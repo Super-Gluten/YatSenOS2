@@ -67,7 +67,7 @@ impl Stack {
             range: Page::range(STACK_INIT_TOP_PAGE, STACK_INIT_TOP_PAGE),
             usage: 0,
         }
-    } // 创建一个初始为空，即页数为0的栈
+    } // 创建一个初始为空，即页数为0的用户栈
 
     pub const fn kstack() -> Self {
         Self {
@@ -79,7 +79,7 @@ impl Stack {
     pub fn init(&mut self, mapper: MapperRef, alloc: FrameAllocatorRef) {
         debug_assert!(self.usage == 0, "Stack is not empty.");
 
-        self.range = elf::map_range(STACK_INIT_BOT, STACK_DEF_PAGE, mapper, alloc).unwrap();
+        self.range = elf::map_range(STACK_INIT_BOT, STACK_DEF_PAGE, mapper, alloc, true).unwrap();
         // 调用函数为elf/src/lib.rs中的map_range why
         self.usage = STACK_DEF_PAGE; // 默认用户栈的页数
     }
@@ -129,17 +129,19 @@ impl Stack {
             aim_page.start_address().as_u64(), 
             count_alloc, 
             mapper, 
-            alloc
+            alloc,
+            true,
         )?;
         // 调用elf/lib.rs中的map_range函数求得相应Page
 
         self.usage += count_alloc; // 栈的页数使用量增加
         self.range = Page::range(new_page.start, self.range.end); // 页的合并
 
-        // info!(
-        //     "Grow Stack: new start {:?}, end {:?}, usage {:?} pages", 
-        //     self.range.start, self.range.end, self.usage);
-        
+        if self.usage % 0x1000 == 0 || self.usage % 0x1 == 0{
+            info!(
+                "Grow Stack: new start {:?}, end {:?}, usage {:?} pages", 
+                self.range.start, self.range.end, self.usage);
+        }
         Ok(())
     }
 

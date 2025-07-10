@@ -4,7 +4,7 @@ use crate::memory::{
     allocator::{ALLOCATOR, HEAP_SIZE},
     get_frame_alloc_for_sure, PAGE_SIZE,
 };
-use alloc::{collections::*, format, sync::Arc};
+use alloc::{collections::*, format, sync::Arc, sync::Weak};
 use spin::{Mutex, RwLock};
 use vm::*;
 use core::ops::DerefMut;
@@ -126,41 +126,13 @@ impl ProcessManager {
         }
     }
 
-    // pub fn spawn_kernel_thread(
-    //     &self,
-    //     entry: VirtAddr,
-    //     name: String,
-    //     proc_data: Option<ProcessData>,
-    // ) -> ProcessId {
-    //     let kproc = self.get_proc(&KERNEL_PID).unwrap(); // 获取内核进程
-    //     let page_table = kproc.read().clone_page_table(); // 获取内核进程的页表
-    //     let proc_vm = Some(ProcessVm::new(page_table)); // 拷贝内核进程的页表
-    //     let proc = Process::new(name, Some(Arc::downgrade(&kproc)), proc_vm, proc_data); // 复制内核进程，生成新的进程
-
-    //     // alloc stack for the new process base on pid
-    //     let stack_top = proc.alloc_init_stack(); // 最终调用ProcessVm中的 init_proc_stack
-    //     info!("the top of the stack is {:?}", stack_top);
-
-    //     // FIXME: set the stack frame
-    //     proc.write().init_stack_frame(entry, stack_top); // 调用ProcessContext中的方法 init_stack_frame
-
-    //     // FIXME: add to process map
-    //     let pid = proc.pid();
-    //     self.add_proc(pid, proc); // 调用ProcessManager中的方法 add_proc
-    //     // FIXME: push to ready queue
-    //     self.push_ready(pid); // 调用ProcessManager中的方法 push_ready
-    //     // FIXME: return new process pid
-    //     pid
-    // } // 0x03 add, 0x04 delete
-
     pub fn kill_current(&self, ret: isize) {
         self.kill(processor::get_pid(), ret);
     }
 
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
         // FIXME: handle page fault
-        if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION) 
-            && !err_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
+        if !err_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
         {
             return false;
         } // 不是由于越权访问和写操作导致的 其他非预期错误 直接返回false

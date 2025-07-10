@@ -71,7 +71,7 @@ fn main() -> isize {
                 for (idx, (cmd, cmd_info)) in commands.iter().enumerate() {
                     println!("{}: {}  -->  {}", idx, cmd, cmd_info);
                 }
-                println!("any question can ask inventor with information{}", student_number);
+                println!("any question can ask inventor with information\n{}", student_number);
             }
             "la" => {
                 sys_list_app();

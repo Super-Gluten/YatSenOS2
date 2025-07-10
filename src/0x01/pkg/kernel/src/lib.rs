@@ -61,6 +61,7 @@ pub fn shutdown() -> ! {
 }
 
 pub fn wait(init: proc::ProcessId) {
+    info!("wait happen");
     loop {
         if proc::still_alive(init) {
             // Why? Check reflection question 5

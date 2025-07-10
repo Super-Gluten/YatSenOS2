@@ -43,6 +43,7 @@ pub fn map_range(
     count: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
+    user_access: bool,
 ) -> Result<PageRange, MapToError<Size4KiB>> {
     let range_start = Page::containing_address(VirtAddr::new(addr));
     let range_end = range_start + count;
@@ -54,7 +55,11 @@ pub fn map_range(
     );
 
     // default flags for stack
-    let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+    let mut flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+
+    if user_access {
+        flags.insert(PageTableFlags::USER_ACCESSIBLE);
+    } // 不添加这一项，将会导致shell因为缺少这一项而无法运行！
     
     for page in Page::range(range_start, range_end) {
         let frame = frame_allocator

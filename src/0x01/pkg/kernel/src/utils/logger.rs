@@ -11,6 +11,8 @@ pub fn init() {
     log::set_max_level(LevelFilter::Trace);
 
     // 在release构建中，只使用info记录重要日志
+    // #[cfg(not(debug_assertions))]
+    // log::set_max_level(LevelFilter::Info);
     // 在release构建中，暂时用trace记录包含详细调试信息的所有日志
     #[cfg(not(debug_assertions))]
     log::set_max_level(LevelFilter::Trace);
