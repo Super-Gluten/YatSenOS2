@@ -6,7 +6,7 @@ use log::warn;
 use pc_keyboard::DecodedKey;
 use alloc::vec::Vec;
 
-// 定义输入类型（这里假设是键盘输入的字符）
+// 输入类型定义
 // pub enum DecodedKey {
 //     Unicode(char), // 已解码的Unicode字符
 //     RawKey(KeyCode), // 无法映射为Unicode的特殊键
@@ -30,7 +30,7 @@ lazy_static! {
 pub fn push_key(key: Key) {
     if INPUT_BUF.push(key).is_err() {
         warn!("Input buffer is full. Dropping key '{:?}'", key);
-        panic!("Buffer overflow in debug mode");
+        // panic!("Buffer overflow in debug mode");
     }
 }
 

@@ -228,4 +228,19 @@ impl ProcessManager {
     pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize{
         self.current().read().read(fd, buf)
     }
+
+    // 0x05 add:
+    // 选择了同样返回一个子进程的Arc引用，因为Manager中需要获取它的pid
+    pub fn fork(&self) -> Arc<Process> {
+        // FIXME: get current process
+        let current_process = self.current();
+        // FIXME: fork to get child
+        let child: Arc<Process> = current_process.fork(); // 逐层调用
+        // FIXME: add child to process list
+        self.add_proc(child.pid(), child.clone()); // 这里压入克隆体，防止借用
+        // FOR DBG: maybe print the process ready queue?
+        debug!("The process ready queue: {:?}", self.ready_queue.lock());
+        child
+    }
+
 }

@@ -62,6 +62,15 @@ impl ProcessContext {
 
         trace!("Init stack frame: {:#?}", &self.stack_frame);
     }
+
+    // 0x05 add: 添加一些方法，便于inner创建时计算栈和设置栈
+    pub fn get_stack_top(&self) -> u64 {
+        self.value.stack_frame.stack_pointer.as_u64()
+    }
+
+    pub fn update_rsp(&mut self, stack_top: u64) {
+        self.value.stack_frame.stack_pointer = VirtAddr::new(stack_top);
+    }
 }
 
 impl Default for ProcessContextValue {

@@ -7,7 +7,7 @@ use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use super::consts::*;
 use crate::drivers::{
     input::{Key, push_key},
-    serial::get_serial_for_sure
+    serial::get_serial
 };
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
@@ -31,7 +31,7 @@ fn receive() {
     // FIXME: receive character from uart 16550, put it into INPUT_BUFFER
     let mut input_buffer: Vec<u8> = Vec::with_capacity(INPUT_BUFFER_SIZE);
     loop {
-        let mut serial = get_serial_for_sure(); // 获取串口实例
+        let mut serial = get_serial().unwrap(); // 获取串口实例
         // 使用uart16550.rs中的receive() 尝试从串口读一个字节
         let rec = serial.receive();
         drop(serial); // 显式释放串口资源

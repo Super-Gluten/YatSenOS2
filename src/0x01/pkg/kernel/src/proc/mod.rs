@@ -203,3 +203,19 @@ pub fn wait_pid(pid: ProcessId,context: &mut ProcessContext) {
         }
     });
 }
+
+// 0x05 add
+pub fn fork(context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        // FIXME: save_current as parent
+        manager.save_current(&context);
+        // FIXME: fork to get child
+        let child = manager.fork(); // 逐层调用，委托给ProcessManager::fork
+        // FIXME: push to child & parent to ready queue
+        manager.push_ready(manager.current().pid()); // 压入当前进程也就是parent进程
+        manager.push_ready(child.pid());
+        // FIXME: switch to next process
+        manager.switch_next(context);
+    })
+}

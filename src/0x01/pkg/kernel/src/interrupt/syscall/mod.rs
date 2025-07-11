@@ -90,6 +90,11 @@ pub fn dispatcher(context: &mut ProcessContext) {
             list_process()
         },
 
+        // None -> pid: u16 or 0 or -1
+        Syscall::Fork => { /* FIXME: Fork the new process */
+            sys_fork(context)
+        },
+
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented
         // ----------------------------------------------------

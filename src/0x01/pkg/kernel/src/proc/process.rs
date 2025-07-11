@@ -10,6 +10,8 @@ use x86_64::structures::paging::*;
 
 use xmas_elf::ElfFile;
 
+use crate::proc::vm::stack::{STACK_MAX_PAGES, STACK_START_MASK}; // 用于计算inner中的栈偏移量
+
 #[derive(Clone)]
 pub struct Process {
     pid: ProcessId,
@@ -92,6 +94,36 @@ impl Process {
 
     pub fn alloc_init_stack(&self) -> VirtAddr {
         self.write().vm_mut().init_proc_stack(self.pid)
+    }
+
+    // 0x05 add:
+    pub fn fork(self: &Arc<Self>) -> Arc<Self> {
+        // FIXME: lock inner as write
+        let mut inner = self.inner.write();
+        // FIXME: inner fork with parent weak ref
+        let child_inner = inner.fork(Arc::downgrade(self)); // 依然是逐级调用
+        // FOR DBG: maybe print the child process info
+        //          e.g. parent, name, pid, etc.
+        let child_pid = ProcessId::new(); // 为子进程分配一个pid
+        debug!(
+            "Parent process: {} has forked {} with name {}",
+            inner.name,
+            child_pid,
+            child_inner.name
+        );
+        // FIXME: make the arc of child
+        let child_process = Arc::new(Self{
+            pid: child_pid,
+            inner: Arc::new(RwLock::new(child_inner))
+        }); // 仿照new方法的末尾的直接创建方法
+
+        // FIXME: add child to current process's children list
+        inner.children.push(child_process.clone()); // 注意这里同样要压入克隆体，不然会返回值出现借用错误
+        // FIXME: set fork ret value for parent with `context.set_rax`
+        inner.context.set_rax(child_pid.0 as usize);
+        // FIXME: mark the child as ready & return it
+        child_process.inner.write().pause(); // 注意这里不能再用child_inner了，那样写不进child_process……
+        return child_process;
     }
 }
 
@@ -191,6 +223,37 @@ impl ProcessInner {
 
     pub fn is_dead(&self) -> bool {
         self.status == ProgramStatus::Dead
+    }
+
+    // 0x05
+    pub fn fork(&mut self, parent: Weak<Process>) -> ProcessInner {
+        // FIXME: fork the process virtual memory struct
+        // FIXME: calculate the real stack offset
+        let read_stack_offset = ((self.children.len() + 1) as u64) * STACK_MAX_PAGES;
+        let child_vm = self.proc_vm.as_ref().unwrap().fork(read_stack_offset); // 保持逐级调用
+
+        // FIXME: update `rsp` in interrupt stack frame
+        let mut child_context: ProcessContext = self.context;
+        let child_stack_top = ( self.context.get_stack_top() & 0xFFFF_FFFF)
+            | (child_vm.stack_start().as_u64() & STACK_START_MASK);
+        child_context.update_rsp(child_stack_top);
+        // FIXME: set the return value 0 for child with `context.set_rax`
+        child_context.set_rax(0);
+        // FIXME: clone the process data struct
+        let child_data = self.proc_data.clone();
+        // FIXME: construct the child process inner
+        // NOTE: return inner because there's no pid record in inner
+        Self {
+            name: self.name.clone(),
+            parent: Some(parent),
+            children: Vec::new(),
+            ticks_passed: 0,
+            status: ProgramStatus::Ready, // rust要求必须初始化完整
+            context: child_context,
+            exit_code: None,
+            proc_data: child_data,
+            proc_vm: Some(child_vm)
+        } // 仿照process中的new方法中新建一个inner结构体
     }
 }
 

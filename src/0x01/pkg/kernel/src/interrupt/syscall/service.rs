@@ -104,3 +104,8 @@ pub fn sys_wait_pid(args: &SyscallArgs, context: &mut ProcessContext) {
 pub fn list_app() {
     proc::list_app();
 }
+
+// None -> pid: u16 or 0 or -1
+pub fn sys_fork(context: &mut ProcessContext){
+    proc::fork(context);
+}
