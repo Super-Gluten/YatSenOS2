@@ -29,6 +29,7 @@ fn main() -> isize {
         "  \\ V // _` | __|| | \\___ \\|  _| |  \\| | | | | \\___ \\ ",
         "   | || (_| | |_ | |  ___) | |___| |\\  | | |_| |___) |",
         "   |_| \\__,_|\\__||_| |____/|_____|_| \\_|  \\___/|____/ ",
+        "    学号：23336345  姓名： 周海铭"
     ];
 
     for (i, line) in banner.iter().enumerate() {
@@ -50,7 +51,7 @@ fn main() -> isize {
     let student_number = " 学号:23336345  姓名： 周海铭";
 
     loop {
-
+    print!("{BOLD}{R3}[YatSenOS]{R4}> {RESET}");
         let binding = stdin().read_line();
         let mut command = binding.trim().split(' '); // 去除首尾的空白字符，并按空格分隔命令和参数
         let op = command.next().unwrap();  // 第一个单词是命令op

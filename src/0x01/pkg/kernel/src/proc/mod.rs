@@ -191,20 +191,15 @@ pub fn still_alive(pid: ProcessId) -> bool {
     })
 }
 
-pub fn wait_pid(pid: ProcessId, context: &mut ProcessContext) -> isize {
+pub fn wait_pid(pid: ProcessId,context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        match manager.get_proc(&pid) {
-            Some(proc) => {
-                if proc.read().is_dead() {
-                    return 0;
-                } else {
-                    let ret = proc.read().exit_code().unwrap();
-                    process_exit(ret, context);
-                    return ret;
-                }
-            },
-            None => return 0,
+        let proc = manager.get_proc(&pid).unwrap();
+        if !still_alive(pid){
+            let exit_code = proc.read().exit_code().unwrap();
+            context.set_rax(exit_code as usize); 
+            manager.save_current(context);
+            manager.switch_next(context);
         }
-    })
+    });
 }
