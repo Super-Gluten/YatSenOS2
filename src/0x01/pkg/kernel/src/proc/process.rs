@@ -112,10 +112,12 @@ impl Process {
             child_inner.name
         );
         // FIXME: make the arc of child
-        let child_process = Arc::new(Self{
-            pid: child_pid,
-            inner: Arc::new(RwLock::new(child_inner))
-        }); // 仿照new方法的末尾的直接创建方法
+        let child_process = Arc::new(
+            Self{
+                pid: child_pid,
+                inner: Arc::new(RwLock::new(child_inner))
+            }
+        ); // 仿照new方法的末尾的直接创建方法
 
         // FIXME: add child to current process's children list
         inner.children.push(child_process.clone()); // 注意这里同样要压入克隆体，不然会返回值出现借用错误
@@ -255,6 +257,14 @@ impl ProcessInner {
             proc_vm: Some(child_vm)
         } // 仿照process中的new方法中新建一个inner结构体
     }
+
+    pub fn block(&mut self) {
+        self.status = ProgramStatus::Blocked;
+    }
+
+    pub fn set_rax(&mut self, ret: usize) {
+        self.context.set_rax(ret);
+    } // 添加一个方法便于manager.rs的wake_up中可以直接写
 }
 
 impl core::ops::Deref for Process {

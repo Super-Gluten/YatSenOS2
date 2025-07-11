@@ -87,7 +87,7 @@ pub fn dispatcher(context: &mut ProcessContext) {
         },
         // None
         Syscall::ListApp => { /* FIXME: list available apps */
-            list_process()
+            list_app()
         },
 
         // None -> pid: u16 or 0 or -1

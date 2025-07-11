@@ -191,17 +191,18 @@ pub fn still_alive(pid: ProcessId) -> bool {
     })
 }
 
-pub fn wait_pid(pid: ProcessId,context: &mut ProcessContext) {
+pub fn wait_pid(pid: ProcessId, context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        let proc = manager.get_proc(&pid).unwrap();
-        if !still_alive(pid){
-            let exit_code = proc.read().exit_code().unwrap();
-            context.set_rax(exit_code as usize); 
+        if let Some(ret) = manager.get_exit_code(pid) {
+            context.set_rax(ret as usize);
+        } else {
+            manager.wait_pid(pid);
             manager.save_current(context);
+            manager.current().write().block();
             manager.switch_next(context);
         }
-    });
+    })
 }
 
 // 0x05 add

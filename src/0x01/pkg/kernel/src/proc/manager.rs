@@ -38,6 +38,7 @@ pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>, // 用读写锁保护的进程键值对
     ready_queue: Mutex<VecDeque<ProcessId>>, // 用于进程管理的双端队列
     app_list: boot::AppListRef, // 0x04: 采用boot/lib.rs中定义的Option<&AppList>
+    wait_queue: Mutex<BTreeMap<ProcessId, BTreeSet<ProcessId>>>, // 0x05: 等待队列
 }
 
 impl ProcessManager {
@@ -52,7 +53,8 @@ impl ProcessManager {
         Self {
             processes: RwLock::new(processes),
             ready_queue: Mutex::new(ready_queue),
-            app_list: apps
+            app_list: apps,
+            wait_queue: Mutex::new(BTreeMap::new()), // 0x05 add
         }
     }
 
@@ -148,6 +150,12 @@ impl ProcessManager {
             warn!("Process #{} not found.", pid);
             return;
         }
+        // 0x05 add
+        if let Some(pids) = self.wait_queue.lock().remove(&pid) {
+            for pid in pids {
+                self.wake_up(pid, Some(ret));
+            }
+        } // finish add
 
         let proc = proc.unwrap();
 
@@ -243,4 +251,51 @@ impl ProcessManager {
         child
     }
 
+    /// Block the process with the given pid
+    pub fn block(&self, pid: ProcessId) {
+        if let Some(proc) = self.get_proc(&pid) {
+            // FIXME: set the process as blocked
+            proc.write().block(); // 调用ProcessInner中的对应函数
+        }
+    }
+
+    pub fn wait_pid(&self, pid: ProcessId) {
+        let mut wait_queue = self.wait_queue.lock();
+        // FIXME: push the current process to the wait queue
+        //        `processor::get_pid()` is waiting for `pid`
+        let entry = wait_queue.entry(pid).or_default();
+        entry.insert(processor::get_pid());
+    }
+
+    pub fn get_exit_code(&self, pid: ProcessId) -> Option<isize> {
+        let exit_code = match self.processes.read().get(&pid) {
+            Some(proc) => {
+                if proc.read().is_dead() {
+                    proc.read().exit_code()
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        };
+        exit_code
+    }
+
+    /// Wake up the process with the given pid
+    ///
+    /// If `ret` is `Some`, set the return value of the process
+    pub fn wake_up(&self, pid: ProcessId, ret: Option<isize>) {
+        if let Some(proc) = self.get_proc(&pid) {
+            let mut inner = proc.write();
+            if let Some(ret) = ret {
+                // FIXME: set the return value of the process
+                //        like `context.set_rax(ret as usize)`
+                inner.set_rax(ret as usize);
+            }
+            // FIXME: set the process as ready
+            inner.pause();
+            // FIXME: push to ready queue
+            self.push_ready(pid);
+        }
+    }
 }
