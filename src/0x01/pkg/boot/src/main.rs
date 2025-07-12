@@ -107,22 +107,37 @@ fn efi_main() -> Status {
     );
 
     // FIXME: map kernel stack
-    // 由于 config中定义kernel_stack_auto_grow = 0, 即栈不会自动增长, 直接定义
-    // 然后使用elf中lib.rs中的map_range函数运行内核
-    let (stack_start_address, stack_size) = (config.kernel_stack_address, config.kernel_stack_size);
-    map_range(
-        stack_start_address,
+    // 0x07 redefine: 内核栈的自动增长
+    let (stack_start, stack_size) = if config.kernel_stack_auto_grow > 0 {
+    let init_size = config.kernel_stack_auto_grow;
+    let bottom_offset = (config.kernel_stack_size - init_size) * 0x1000;
+    let init_bottom = config.kernel_stack_address + bottom_offset;
+        (init_bottom, init_size)
+    } else {
+        (config.kernel_stack_address, config.kernel_stack_size)
+    };
+
+    match map_range(
+        stack_start,
         stack_size,
         &mut page_table,
         &mut frame_allocator,
         false,
-    );
+    ) {
+        Ok(Range) => {
+            info!("Successfully mapper kernel stack: {:?} {:?}", Range.start, Range.end);
+        }
+        Err(e) => {
+            panic!("Failed to map kernel stack with error {:?}", e);
+        }
+    }
 
     // FIXME: recover write protect (Cr0)
     unsafe {
         // 使用 insert还原Cr0的写保护
         Cr0::update(|f| f.insert(Cr0Flags::WRITE_PROTECT));
     }
+    let kernel_pages = get_page_usage(&elf);
     free_elf(elf);
 
     // 5. Pass system table to kernel
@@ -141,6 +156,7 @@ fn efi_main() -> Status {
         physical_memory_offset: config.physical_memory_offset,
         system_table,
         loaded_apps : apps, // 0x04 将上文加载的用户程序信息传递给内核
+        kernel_pages: kernel_pages,
     };
 
     // align stack to 8 bytes

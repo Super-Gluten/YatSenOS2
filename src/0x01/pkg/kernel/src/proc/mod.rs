@@ -43,7 +43,9 @@ pub enum ProgramStatus {
 
 /// init process manager
 pub fn init(boot_info: &'static boot::BootInfo) {  // 0x04 add parameter
-    let proc_vm = ProcessVm::new(PageTableContext::new()).init_kernel_vm();
+    // 0x07 add parameter:
+    // FIXME: you may need to implement `init_kernel_vm` by yourself
+    let proc_vm = ProcessVm::new(PageTableContext::new()).init_kernel_vm(&boot_info.kernel_pages);
 
     trace!("Init kernel vm: {:#?}", proc_vm);
 
@@ -56,6 +58,8 @@ pub fn init(boot_info: &'static boot::BootInfo) {  // 0x04 add parameter
             Some(ProcessData::new())
         )
     };
+    // 0x07 add:
+    kproc.write().resume();
 
     // 0x04 add :
     let app_list = boot_info.loaded_apps.as_ref();
@@ -271,5 +275,14 @@ pub fn sem_signal(key: u32, context: &mut ProcessContext) {
             SemaphoreResult::WakeUp(pid) => manager.wake_up(pid,None),
             _ => unreachable!(),
         };
+    })
+}
+
+
+// 0x07 add: brk
+pub fn brk(addr: Option<VirtAddr>) -> Option<VirtAddr> {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        // NOTE: `brk` does not need to get write lock
+        get_process_manager().current().read().brk(addr)
     })
 }

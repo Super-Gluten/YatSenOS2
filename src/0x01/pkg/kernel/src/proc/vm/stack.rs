@@ -1,5 +1,5 @@
 use x86_64::{
-    structures::paging::{mapper::MapToError, page::*, Page},
+    structures::paging::{mapper::{MapToError, UnmapError}, page::*, Page},
     VirtAddr,
 };
 
@@ -35,8 +35,8 @@ const STACK_INIT_TOP_PAGE: Page<Size4KiB> = Page::containing_address(VirtAddr::n
 pub const KSTACK_MAX: u64 = 0xffff_ff02_0000_0000; // 内核栈最大的虚拟地址边界
 pub const KSTACK_DEF_BOT: u64 = KSTACK_MAX - STACK_MAX_SIZE; // 默认内核栈栈底
 // KSTACK_DEF_BOT = 0xffff_ff01_0000_0000
-pub const KSTACK_DEF_PAGE: u64 = 512 /* FIXME: decide on the boot config*/;
-// 由于在boot/config.rs中设置的 kernel_stack_size = 512，实际映射为2MB
+pub const KSTACK_DEF_PAGE: u64 = 8; /* FIXME: decide on the boot config*/
+// 由于在boot/config.rs中设置的 kernel_stack_size = 1048576, 实际内核初始大小为4KiB
 pub const KSTACK_DEF_SIZE: u64 = KSTACK_DEF_PAGE * crate::memory::PAGE_SIZE; // 默认内核栈的大小
 
 pub const KSTACK_INIT_BOT: u64 = KSTACK_MAX - KSTACK_DEF_SIZE; // 初始内核栈栈底
@@ -139,11 +139,11 @@ impl Stack {
         self.usage += count_alloc; // 栈的页数使用量增加
         self.range = Page::range(new_page.start, self.range.end); // 页的合并
 
-        if self.usage % 0x1000 == 0 || self.usage % 0x1 == 0{
+        if self.usage % 100 == 0 || self.usage == 1 {
             info!(
                 "Grow Stack: new start {:?}, end {:?}, usage {:?} pages", 
                 self.range.start, self.range.end, self.usage);
-        }
+        } // 只有第一次堆栈和达到几百次堆栈时才输出堆栈信息
         Ok(())
     }
 
@@ -202,6 +202,27 @@ impl Stack {
                 (size * Size4KiB::SIZE / 8) as usize,
             );
         }
+    }
+
+    // 0x07 add:释放栈区页面
+        pub fn clean_up(
+        &mut self,
+        // following types are defined in
+        //   `pkg/kernel/src/proc/vm/mod.rs`
+        mapper: MapperRef,
+        dealloc: FrameAllocatorRef,
+    ) -> Result<(), UnmapError> {
+        if self.usage == 0 {
+            warn!("Stack is empty, no need to clean up.");
+            return Ok(());
+        }
+
+        // FIXME: unmap stack pages with `elf::unmap_pages`
+        let start = self.range.start.start_address().as_u64();
+        elf::unmap_pages(start, self.usage, mapper, dealloc, true);
+        self.usage = 0;
+
+        Ok(())
     }
 }
 

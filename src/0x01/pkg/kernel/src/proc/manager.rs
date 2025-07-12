@@ -8,6 +8,7 @@ use alloc::{collections::*, format, sync::Arc, sync::Weak};
 use spin::{Mutex, RwLock};
 use vm::*;
 use core::ops::DerefMut;
+use crate::utils::humanized_size;
 
 use xmas_elf::ElfFile;
 
@@ -183,6 +184,19 @@ impl ProcessManager {
         // get_frame_alloc_for_sure()返回 帧分配器的互斥锁，确保 帧分配器存在
         // 因为不需要实际使用这个分配器，所以立刻通过drop()释放掉
 
+        // NOTE: print memory page usage
+        //      (you may implement following functions)
+        let alloc = get_frame_alloc_for_sure();
+        let frames_used = alloc.frames_used();
+        let frames_recycled = alloc.frames_recycled();
+        let frames_total = alloc.frames_total();
+
+        let used = (frames_used - frames_recycled) * PAGE_SIZE as usize;
+        let total = frames_total * PAGE_SIZE as usize;
+
+        output += &Self::format_usage("Memory", used, total);
+        drop(alloc);
+
         output += format!("Queue  : {:?}\n", self.ready_queue.lock()).as_str();
 
         output += &processor::print_processors();
@@ -297,5 +311,24 @@ impl ProcessManager {
             // FIXME: push to ready queue
             self.push_ready(pid);
         }
+    }
+
+    // 0x07 add
+    // A helper function to format memory usage
+    pub fn format_usage(name: &str, used: usize, total: usize) -> String {
+        let (used_float, used_unit) = humanized_size(used as u64);
+        let (total_float, total_unit) = humanized_size(total as u64);
+
+        format!(
+            "{:<6} : {:>6.*} {:>3} / {:>6.*} {:>3} ({:>5.2}%)\n",
+            name,
+            2,
+            used_float,
+            used_unit,
+            2,
+            total_float,
+            total_unit,
+            used as f32 / total as f32 * 100.0
+        )
     }
 }

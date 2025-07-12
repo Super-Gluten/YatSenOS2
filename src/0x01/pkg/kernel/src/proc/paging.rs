@@ -73,7 +73,7 @@ impl PageTableContext {
 
     pub fn using_count(&self) -> usize {
         Arc::strong_count(&self.reg)
-    }
+    } // 0x07 mention: 用于获取当前页表被引用次数
 
     pub fn fork(&self) -> Self {
         // forked process shares the page table

@@ -105,6 +105,11 @@ pub fn dispatcher(context: &mut ProcessContext) {
             context.set_rax(sys_time() as usize)
         },
 
+        // 0x07 add:
+        Syscall::Brk => {
+            context.set_rax(sys_brk(&args))
+        }
+
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented
         // ----------------------------------------------------

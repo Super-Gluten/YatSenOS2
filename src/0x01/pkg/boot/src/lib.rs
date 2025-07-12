@@ -9,10 +9,11 @@ pub use uefi::proto::console::gop::{GraphicsOutput, ModeInfo};
 use core::ptr::NonNull;
 use x86_64::VirtAddr;
 use x86_64::registers::control::Cr3;
-use x86_64::structures::paging::{OffsetPageTable, PageTable};
+use x86_64::structures::paging::{OffsetPageTable, PageTable, page::{PageRangeInclusive, Page}};
 
 use arrayvec::{ArrayString, ArrayVec}; // 0x04新增App结构体
 use xmas_elf::ElfFile; // 0x04 新使用的ElfFile
+use xmas_elf::program::ProgramHeader;
 
 pub mod allocator;
 pub mod config;
@@ -38,6 +39,7 @@ pub struct App { // 删除了App类型的生命周期
 pub const MAX_LIST_APP: usize = 16; // 使用const指定用户程序数组的最大长度，类型为usize
 pub type AppList = ArrayVec<App, MAX_LIST_APP>;
 pub type AppListRef = Option<&'static AppList> ; // .as_ref()返回Option<&T>
+pub type KernelPages = ArrayVec<PageRangeInclusive, 8>; // 0x07 add: 传递内核的内存占用信息
 
 /// This structure represents the information that the bootloader passes to the kernel.
 pub struct BootInfo {
@@ -52,6 +54,9 @@ pub struct BootInfo {
 
     /// Loaded apps
     pub loaded_apps: Option<AppList>, // 0x04 add
+
+    // Kernel pages
+    pub kernel_pages: KernelPages, // 0x07 add
 }
 
 /// Get current page table from CR3
@@ -111,4 +116,21 @@ macro_rules! entry_point {
             f(boot_info)
         }
     };
+}
+
+// 0x07 add:
+fn get_page_range(segment: &ProgramHeader) -> PageRangeInclusive {
+    let start = segment.virtual_addr();
+    let end = start + segment.mem_size() - 1;
+
+    let page_start = Page::containing_address(VirtAddr::new(start));
+    let page_end = Page::containing_address(VirtAddr::new(end));
+    Page::range_inclusive(page_start, page_end)
+}
+
+pub fn get_page_usage(elf: &ElfFile) -> KernelPages {
+    elf.program_iter()
+        .filter(|segment| segment.get_type() == Ok(xmas_elf::program::Type::Load))
+        .map(|segment| get_page_range(&segment))
+        .collect()
 }

@@ -2,13 +2,15 @@
 
 #[macro_use]
 extern crate log;
+extern crate alloc;
 
 use core::ptr::{copy_nonoverlapping, write_bytes};
 
-use x86_64::structures::paging::page::PageRange;
+use x86_64::structures::paging::page::{PageRange, PageRangeInclusive};
 use x86_64::structures::paging::{mapper::*, *};
 use x86_64::{PhysAddr, VirtAddr, align_up};
 use xmas_elf::{ElfFile, program};
+use alloc::vec::Vec;
 
 /// Map physical memory
 ///
@@ -92,19 +94,25 @@ pub fn load_elf(
     physical_offset: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    user_access: bool // 0x04 add
-) -> Result<(), MapToError<Size4KiB>> {
+    user_access: bool, // 0x04 add
+) -> Result<Vec<PageRangeInclusive>, MapToError<Size4KiB>> {
     trace!("Loading ELF file...{:?}", elf.input.as_ptr());
 
-    for segment in elf.program_iter() {
-        if segment.get_type().unwrap() != program::Type::Load {
-            continue;
-        }
-
-        load_segment(elf, physical_offset, &segment, page_table, frame_allocator, user_access)?
-    }
-
-    Ok(())
+    // use iterator and functional programming to load segments
+    // and collect the loaded pages into a vector
+    elf.program_iter()
+        .filter(|segment| segment.get_type().unwrap() == program::Type::Load)
+        .map(|segment| {
+            load_segment(
+                elf,
+                physical_offset,
+                &segment,
+                page_table,
+                frame_allocator,
+                user_access,
+            )
+        })
+        .collect()
 }
 
 /// Load & Map ELF segment
@@ -117,7 +125,7 @@ fn load_segment(
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
     user_access: bool // 0x04 add: 用于判断是否需要添加USER_ACCESSIBLE标志
-) -> Result<(), MapToError<Size4KiB>> {
+) -> Result<PageRangeInclusive, MapToError<Size4KiB>> {
     trace!("Loading & mapping segment: {:#x?}", segment);
 
     let mem_size = segment.mem_size();
@@ -225,7 +233,7 @@ fn load_segment(
         }
     }
 
-    Ok(())
+    Ok(Page::range_inclusive(start_page, end_page))
 }
 
 // 0x04 add 自定义函数：用于创建用户态堆且不改变原有map_range
@@ -273,4 +281,52 @@ pub fn user_map_range(
     );
 
     Ok(Page::range(range_start, range_end))
+}
+
+// 0x07 add: ummap_range函数和unmap_page函数
+/// Unmap a range of memory
+///
+/// deallocate frames and unmap to specified address (R/W)
+pub fn unmap_pages(
+    addr: u64,
+    pages: u64,
+    page_table: &mut impl Mapper<Size4KiB>,
+    frame_deallocator: &mut impl FrameDeallocator<Size4KiB>,
+    do_dealloc: bool,
+) -> Result<(), UnmapError> {
+    debug_assert!(pages > 0, "pages must be greater than 0");
+    let start = Page::containing_address(VirtAddr::new(addr));
+    let end = start + pages - 1;
+
+    unmap_range(
+        Page::range_inclusive(start, end),
+        page_table,
+        frame_deallocator,
+        do_dealloc,
+    )
+}
+
+pub fn unmap_range(
+    page_range: PageRangeInclusive,
+    page_table: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameDeallocator<Size4KiB>,
+    dealloc: bool,
+) -> Result<(), UnmapError> {
+    trace!(
+        "Unmap Range: {:#} - {:#} ({})",
+        page_range.start.start_address().as_u64(),
+        page_range.end.start_address().as_u64(),
+        page_range.count()
+    );
+
+    for page in page_range {
+        let (frame ,flush) = page_table.unmap(page)?;
+        if dealloc {
+            unsafe {
+                frame_allocator.deallocate_frame(frame);
+            }
+        }
+        flush.flush();
+    }
+    Ok(())
 }

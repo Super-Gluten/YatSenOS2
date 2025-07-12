@@ -1,6 +1,6 @@
-#![cfg_attr(not(test), no_std)]
 #![allow(dead_code, unused_imports)]
 #![feature(alloc_error_handler)]
+#![cfg_attr(not(test), no_std)]
 
 #[macro_use]
 pub mod macros;
@@ -10,6 +10,7 @@ extern crate syscall_def;
 
 #[macro_use]
 pub mod io;
+#[cfg(any(feature = "brk_alloc", feature = "kernel_alloc"))]
 pub mod allocator;
 pub mod sync;
 pub extern crate alloc;
@@ -19,9 +20,15 @@ mod syscall;
 use core::fmt::*;
 
 pub use alloc::*;
+pub use chrono::*;
 pub use io::*;
-pub use syscall::*;
 pub use sync::*;
+pub use syscall::*;
+
+pub fn init() {
+    #[cfg(feature = "brk_alloc")]
+    crate::allocator::init();
+}
 
 #[macro_export]
 macro_rules! print {

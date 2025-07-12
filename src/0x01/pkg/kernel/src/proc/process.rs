@@ -1,5 +1,6 @@
 use super::*;
 use crate::memory::*;
+use crate::humanized_size;
 use vm::*;
 use alloc::sync::{Weak, Arc};
 use alloc::vec::Vec;
@@ -282,6 +283,11 @@ impl ProcessInner {
     pub fn sem_signal(&mut self, key: u32) -> SemaphoreResult {
         self.proc_data.as_mut().unwrap().sem_signal(key)
     }
+
+    // 0x07 add: brk的逐层调用
+    pub fn brk(&self, addr: Option<VirtAddr>) -> Option<VirtAddr>{
+        self.proc_vm.as_ref().unwrap().brk(addr)
+    }
 }
 
 impl core::ops::Deref for Process {
@@ -331,13 +337,16 @@ impl core::fmt::Debug for Process {
 impl core::fmt::Display for Process {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let inner = self.inner.read();
+        let (size, unit) = humanized_size(inner.proc_vm.as_ref().map_or(0, |vm| vm.memory_usage()));
         write!(
             f,
-            " #{:-3} | #{:-3} | {:12} | {:7} | {:?}",
+            " #{:-3} | #{:-3} | {:12} | {:7} | {:>5.1} {} | {:?}",
             self.pid.0,
             inner.parent().map(|p| p.pid.0).unwrap_or(0),
             inner.name,
             inner.ticks_passed,
+            size,
+            unit,
             inner.status
         )?;
         Ok(())

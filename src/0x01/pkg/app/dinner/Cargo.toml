@@ -3,5 +3,9 @@ name = "ysos_dinner"
 version.workspace = true
 edition.workspace = true
 
-[dependencies]
-lib = { workspace = true }
+[dependencies.lib]
+package = "yslib"
+path = "../../lib"
+default-features = false
+features = ["brk_alloc"]
+

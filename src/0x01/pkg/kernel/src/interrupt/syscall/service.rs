@@ -6,6 +6,7 @@ use crate::memory::*;
 use crate::proc;
 
 use super::SyscallArgs;
+use x86_64::VirtAddr;
 
 // path: &str (ptr: arg0 as *const u8, len: arg1) -> pid: u16
 pub fn spawn_process(args: &SyscallArgs) -> usize {
@@ -127,4 +128,17 @@ pub fn sys_time() -> u64 {
     let secs = time.hour() as u64 * 3600 + time.minute() as u64 * 60 + time.second() as u64;
     let msecs = time.nanosecond() / 1_000_000; 
     secs * 1000 + msecs as u64
+}
+
+// 0x07 add: brk
+pub fn sys_brk(args: &SyscallArgs) -> usize {
+    let new_heap_end = if args.arg0 == 0 {
+        None
+    } else {
+        Some(VirtAddr::new(args.arg0 as u64))
+    };
+    match brk(new_heap_end) {
+        Some(new_heap_end) => new_heap_end.as_u64() as usize,
+        None => !0,
+    }
 }
