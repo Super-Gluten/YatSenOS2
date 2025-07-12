@@ -10,6 +10,7 @@ extern crate syscall_def;
 
 #[macro_use]
 pub mod io;
+#[cfg(any(feature = "brk_alloc", feature = "kernel_alloc"))]
 pub mod allocator;
 pub mod sync;
 pub extern crate alloc;

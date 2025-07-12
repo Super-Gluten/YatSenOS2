@@ -9,6 +9,6 @@ chrono = { workspace = true }
 linked_list_allocator = { workspace = true, optional = true }
 
 [features]
-default = ["kernel_alloc"]
+default = ["brk_alloc"]
 kernel_alloc = []
 brk_alloc = ["dep:linked_list_allocator"]
