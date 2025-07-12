@@ -8,7 +8,8 @@ macro_rules! entry {
         pub extern "C" fn __impl_start() {
             lib::init(); // THIS LINE IS NEW IN LAB 7
             let ret = $fn();
-            lib::sys_exit(ret);
+            // FIXME: after syscall, add lib::sys_exit(ret);
+            lib::sys_exit(ret); // 调用syscall.rs中的sys_exit()
         }
     };
 }

@@ -1,0 +1,7 @@
+[package]
+name = "my_shell"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lib = { workspace = true }
