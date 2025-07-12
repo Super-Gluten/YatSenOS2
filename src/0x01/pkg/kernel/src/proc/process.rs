@@ -265,6 +265,23 @@ impl ProcessInner {
     pub fn set_rax(&mut self, ret: usize) {
         self.context.set_rax(ret);
     } // 添加一个方法便于manager.rs的wake_up中可以直接写
+
+    // 0x05: 信号量相关的接口
+    pub fn sem_init(&mut self, key: u32, value: usize) -> bool {
+        self.proc_data.as_mut().unwrap().sem_init(key, value)
+    }
+
+    pub fn sem_remove(&mut self, key: u32) -> bool {
+        self.proc_data.as_mut().unwrap().sem_remove(key)
+    }
+
+    pub fn sem_wait(&mut self, key: u32, pid: ProcessId) -> SemaphoreResult {
+        self.proc_data.as_mut().unwrap().sem_wait(key, pid)
+    }
+
+    pub fn sem_signal(&mut self, key: u32) -> SemaphoreResult {
+        self.proc_data.as_mut().unwrap().sem_signal(key)
+    }
 }
 
 impl core::ops::Deref for Process {

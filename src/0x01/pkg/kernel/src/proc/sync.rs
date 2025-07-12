@@ -43,7 +43,16 @@ impl Semaphore {
     pub fn wait(&mut self, pid: ProcessId) -> SemaphoreResult {
         // FIXME: if the count is 0, then push pid into the wait queue
         //          return Block(pid)
+        
+        if self.count == 0 {
+            self.wait_queue.push_back(pid);
+            return SemaphoreResult::Block(pid);
+        } // 当信号量为0的时候，阻塞对应需求
         // FIXME: else decrease the count and return Ok
+        else {
+            self.count -= 1;
+            return SemaphoreResult::Ok;
+        } // 否则信号量--，满足对应需求
     }
 
     /// Signal the semaphore (release/up/verhogen)
@@ -54,7 +63,17 @@ impl Semaphore {
         // FIXME: if the wait queue is not empty
         //          pop a process from the wait queue
         //          return WakeUp(pid)
+        
+
+        if !self.wait_queue.is_empty() {
+            let pid = self.wait_queue.pop_front().unwrap();
+            return SemaphoreResult::WakeUp(pid);
+        } // 唤醒等待队列第一个进程
         // FIXME: else increase the count and return Ok
+        else {
+            self.count += 1;
+            return SemaphoreResult::Ok;
+        } // 如果等待队列为空，则对应V操作使得资源量++，信号量++
     }
 }
 
@@ -69,6 +88,7 @@ impl SemaphoreSet {
 
         // FIXME: insert a new semaphore into the sems
         //          use `insert(/* ... */).is_none()`
+        return self.sems.insert(SemaphoreId::new(key), Mutex::new(Semaphore::new(value))).is_none();
     }
 
     pub fn remove(&mut self, key: u32) -> bool {
@@ -76,6 +96,7 @@ impl SemaphoreSet {
 
         // FIXME: remove the semaphore from the sems
         //          use `remove(/* ... */).is_some()`
+        return self.sems.remove(&SemaphoreId::new(key)).is_some();
     }
 
     /// Wait the semaphore (acquire/down/proberen)
@@ -84,6 +105,14 @@ impl SemaphoreSet {
 
         // FIXME: try get the semaphore from the sems
         //         then do it's operation
+        match self.sems.get(&sid) {
+            Some(sem) => {
+                sem.lock().wait(pid) // 调用上述的wait函数
+            },
+            None => {
+                SemaphoreResult::NotExist
+            }
+        }
         // FIXME: return NotExist if the semaphore is not exist
     }
 
@@ -93,6 +122,14 @@ impl SemaphoreSet {
 
         // FIXME: try get the semaphore from the sems
         //         then do it's operation
+        match self.sems.get(&sid) {
+            Some(sem) => {
+                sem.lock().signal() // 调用上述的signal函数
+            },
+            None => {
+                SemaphoreResult::NotExist
+            }
+        }
         // FIXME: return NotExist if the semaphore is not exist
     }
 }

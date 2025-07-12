@@ -7,10 +7,13 @@ mod process;
 pub mod processor;
 mod vm;
 
+pub mod sync; // 0x05 add
+
 use manager::*;
 use process::*;
 use vm::*;
 use processor::*; // 在switch函数中使用了proceeor相关的函数
+use sync::*; // 0x05 add
 use crate::memory::PAGE_SIZE;
 
 use alloc::string::String;
@@ -218,5 +221,55 @@ pub fn fork(context: &mut ProcessContext) {
         manager.push_ready(child.pid());
         // FIXME: switch to next process
         manager.switch_next(context);
+    })
+}
+
+pub fn sem_init(key: u32, val: usize) -> usize {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let ret = manager.current().write().sem_init(key, val);
+        ret as usize
+    })
+}
+
+pub fn sem_remove(key: u32) -> usize {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let ret = manager.current().write().sem_remove(key);
+        ret as usize
+    })
+}
+
+
+pub fn sem_wait(key: u32, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let pid = processor::get_pid();
+        let ret = manager.current().write().sem_wait(key, pid);
+        match ret {
+            SemaphoreResult::Ok => context.set_rax(0),
+            SemaphoreResult::NotExist => context.set_rax(1),
+            SemaphoreResult::Block(pid) => {
+                // FIXME: save, block it, then switch to next
+                //        use `save_current` and `switch_next`
+                manager.save_current(context);
+                manager.block(&pid);
+                manager.switch_next(context);
+            }
+            _ => unreachable!(),
+        }
+    })
+}
+
+pub fn sem_signal(key: u32, context: &mut ProcessContext) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let ret = manager.current().write().sem_signal(key);
+        match ret {
+            SemaphoreResult::Ok => context.set_rax(0),
+            SemaphoreResult::NotExist => context.set_rax(1),
+            SemaphoreResult::WakeUp(pid) => manager.wake_up(pid,None),
+            _ => unreachable!(),
+        };
     })
 }

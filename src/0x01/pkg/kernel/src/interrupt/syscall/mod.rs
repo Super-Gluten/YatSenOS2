@@ -90,9 +90,19 @@ pub fn dispatcher(context: &mut ProcessContext) {
             list_app()
         },
 
+        // 0x05: add Fork & Sem
         // None -> pid: u16 or 0 or -1
         Syscall::Fork => { /* FIXME: Fork the new process */
             sys_fork(context)
+        },
+
+        // op: u8, key: u32, val: usize -> ret: any
+        Syscall::Sem => {
+            sys_sem(&args, context)
+        },
+
+        Syscall::Time => {
+            context.set_rax(sys_time() as usize)
         },
 
         // ----------------------------------------------------

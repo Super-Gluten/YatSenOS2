@@ -45,8 +45,6 @@ impl Stdin {
                 }
             }
         }
-
-        String::new()
     }
 }
 

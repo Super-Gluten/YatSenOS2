@@ -13,13 +13,15 @@ pub struct ProcessData {
     // shared data
     pub(super) env: Arc<RwLock<BTreeMap<String, String>>>,
     pub(super) resources: Arc<RwLock<ResourceSet>>, // 0x04 add
+    pub(super) semaphores: Arc<RwLock<SemaphoreSet>>, // 0x05 add
 }
 
 impl Default for ProcessData {
     fn default() -> Self {
         Self {
             env: Arc::new(RwLock::new(BTreeMap::new())),
-            resources: Arc::new(RwLock::new(ResourceSet::default())) // 0x04 add
+            resources: Arc::new(RwLock::new(ResourceSet::default())), // 0x04 add
+            semaphores: Arc::new(RwLock::new(SemaphoreSet::default())),
         }
     }
 }
@@ -44,5 +46,21 @@ impl ProcessData {
 
     pub fn write(&self, fd: u8, buf: &[u8]) -> isize {
         self.resources.read().write(fd, buf)
+    }
+
+    // 0x05 add: 信号量的四种操作：
+    pub fn sem_init(&mut self, key: u32, value: usize) -> bool {
+        self.semaphores.write().insert(key, value)
+    }
+
+    pub fn sem_remove(&mut self, key: u32) -> bool {
+        self.semaphores.write().remove(key)
+    }
+
+    pub fn sem_wait(&mut self, key: u32, pid: ProcessId) -> SemaphoreResult {
+        self.semaphores.write().wait(key, pid)
+    }
+    pub fn sem_signal(&mut self, key: u32) -> SemaphoreResult {
+        self.semaphores.write().signal(key)
     }
 }

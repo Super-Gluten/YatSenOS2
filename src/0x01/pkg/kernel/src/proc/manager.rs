@@ -252,7 +252,7 @@ impl ProcessManager {
     }
 
     /// Block the process with the given pid
-    pub fn block(&self, pid: ProcessId) {
+    pub fn block(&self, pid: &ProcessId) {
         if let Some(proc) = self.get_proc(&pid) {
             // FIXME: set the process as blocked
             proc.write().block(); // 调用ProcessInner中的对应函数

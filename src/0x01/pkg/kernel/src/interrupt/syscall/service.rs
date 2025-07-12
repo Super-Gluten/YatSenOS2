@@ -109,3 +109,22 @@ pub fn list_app() {
 pub fn sys_fork(context: &mut ProcessContext){
     proc::fork(context);
 }
+
+// 0x05 add: 信号量的实现，根据args的值确定其不同操作
+pub fn sys_sem(args: &SyscallArgs, context: &mut ProcessContext) {
+    match args.arg0 {
+        0 => context.set_rax(sem_init(args.arg1 as u32, args.arg2)),
+        1 => context.set_rax(sem_remove(args.arg1 as u32)),
+        2 => sem_signal(args.arg1 as u32, context),
+        3 => sem_wait(args.arg1 as u32, context),
+        _ => context.set_rax(usize::MAX),
+    }
+}
+
+// 0x04 加分项, 0x05 add: sleep的实现
+pub fn sys_time() -> u64 {
+    let time = uefi::runtime::get_time().unwrap();
+    let secs = time.hour() as u64 * 3600 + time.minute() as u64 * 60 + time.second() as u64;
+    let msecs = time.nanosecond() / 1_000_000; 
+    secs * 1000 + msecs as u64
+}
