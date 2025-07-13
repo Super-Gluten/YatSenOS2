@@ -1,13 +1,13 @@
-use volatile::{access::ReadOnly, VolatileRef};
-use x86_64::{registers::rflags::RFlags, structures::idt::InterruptStackFrameValue, VirtAddr};
-use x86_64::structures::gdt::SegmentSelector; // 在Default内的SegmentSelector需要使用
+use volatile::{VolatileRef, access::ReadOnly};
+use x86_64::structures::gdt::SegmentSelector;
+use x86_64::{VirtAddr, registers::rflags::RFlags, structures::idt::InterruptStackFrameValue}; // 在Default内的SegmentSelector需要使用
 
-use crate::{memory::gdt::get_selector, memory::gdt::get_user_selector, RegistersValue};
+use crate::{RegistersValue, memory::gdt::get_selector, memory::gdt::get_user_selector};
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ProcessContextValue {
-    pub regs: RegistersValue, // 使用utils/reg.rs中定义的结构体
+    pub regs: RegistersValue,                  // 使用utils/reg.rs中定义的结构体
     pub stack_frame: InterruptStackFrameValue, // 使用x86_64库中idt的中断栈值
 }
 
@@ -22,8 +22,8 @@ impl ProcessContext {
     pub fn as_mut(&mut self) -> VolatileRef<ProcessContextValue> {
         VolatileRef::from_mut_ref(&mut self.value)
     } // 返回一个对 ProcessContextValue的易变引用包装器，修改易变数据时使用
-	// VolatileRef：特殊的引用包装器，用于处理 易变内存访问，防止编译器进行不安全的优化
-    
+    // VolatileRef：特殊的引用包装器，用于处理 易变内存访问，防止编译器进行不安全的优化
+
     #[inline]
     pub fn as_ref(&self) -> VolatileRef<'_, ProcessContextValue, ReadOnly> {
         VolatileRef::from_ref(&self.value)

@@ -10,7 +10,6 @@ use x86_64::structures::paging::page::{PageRange, PageRangeInclusive};
 use x86_64::structures::paging::{mapper::*, *};
 use x86_64::{PhysAddr, VirtAddr, align_up};
 use xmas_elf::{ElfFile, program};
-use alloc::vec::Vec;
 
 /// Map physical memory
 ///
@@ -98,21 +97,15 @@ pub fn load_elf(
 ) -> Result<Vec<PageRangeInclusive>, MapToError<Size4KiB>> {
     trace!("Loading ELF file...{:?}", elf.input.as_ptr());
 
-    // use iterator and functional programming to load segments
-    // and collect the loaded pages into a vector
-    elf.program_iter()
-        .filter(|segment| segment.get_type().unwrap() == program::Type::Load)
-        .map(|segment| {
-            load_segment(
-                elf,
-                physical_offset,
-                &segment,
-                page_table,
-                frame_allocator,
-                user_access,
-            )
-        })
-        .collect()
+    for segment in elf.program_iter() {
+        if segment.get_type().unwrap() != program::Type::Load {
+            continue;
+        }
+
+        load_segment(elf, physical_offset, &segment, page_table, frame_allocator)?
+    }
+
+    Ok(())
 }
 
 /// Load & Map ELF segment
@@ -149,13 +142,8 @@ fn load_segment(
         page_table_flags |= PageTableFlags::NO_EXECUTE
     }
 
-    // // 默认设置允许用户空间访问
-    // page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
-
-    // 0x04 add: 根据load_elf的参数决定页表是否添加USER_ACCESSIBLE标志位
-    if user_access {
-        page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
-    }
+    // 默认设置允许用户空间访问
+    page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
 
     trace!("Segment page table flag: {:?}", page_table_flags);
 

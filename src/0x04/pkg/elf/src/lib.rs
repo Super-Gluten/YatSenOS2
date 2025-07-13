@@ -60,7 +60,7 @@ pub fn map_range(
     if user_access {
         flags.insert(PageTableFlags::USER_ACCESSIBLE);
     } // 不添加这一项，将会导致shell因为缺少这一项而无法运行！
-    
+
     for page in Page::range(range_start, range_end) {
         let frame = frame_allocator
             .allocate_frame()
@@ -92,7 +92,7 @@ pub fn load_elf(
     physical_offset: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    user_access: bool // 0x04 add
+    user_access: bool, // 0x04 add
 ) -> Result<(), MapToError<Size4KiB>> {
     trace!("Loading ELF file...{:?}", elf.input.as_ptr());
 
@@ -101,7 +101,14 @@ pub fn load_elf(
             continue;
         }
 
-        load_segment(elf, physical_offset, &segment, page_table, frame_allocator, user_access)?
+        load_segment(
+            elf,
+            physical_offset,
+            &segment,
+            page_table,
+            frame_allocator,
+            user_access,
+        )?
     }
 
     Ok(())
@@ -116,7 +123,7 @@ fn load_segment(
     segment: &program::ProgramHeader,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    user_access: bool // 0x04 add: 用于判断是否需要添加USER_ACCESSIBLE标志
+    user_access: bool, // 0x04 add: 用于判断是否需要添加USER_ACCESSIBLE标志
 ) -> Result<(), MapToError<Size4KiB>> {
     trace!("Loading & mapping segment: {:#x?}", segment);
 
@@ -247,7 +254,7 @@ pub fn user_map_range(
         count
     );
 
-    let flags = PageTableFlags::PRESENT 
+    let flags = PageTableFlags::PRESENT
         | PageTableFlags::WRITABLE
         | PageTableFlags::USER_ACCESSIBLE
         | PageTableFlags::NO_EXECUTE;

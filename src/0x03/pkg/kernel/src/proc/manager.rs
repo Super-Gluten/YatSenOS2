@@ -1,13 +1,13 @@
 use super::*;
 use crate::memory::{
-    self,
+    self, PAGE_SIZE,
     allocator::{ALLOCATOR, HEAP_SIZE},
-    get_frame_alloc_for_sure, PAGE_SIZE,
+    get_frame_alloc_for_sure,
 };
 use alloc::{collections::*, format, sync::Arc};
+use core::ops::DerefMut;
 use spin::{Mutex, RwLock};
 use vm::*;
-use core::ops::DerefMut;
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
@@ -22,7 +22,7 @@ pub fn init(init: Arc<Process>) {
 
     // FIXME: set processor's current pid to init's pid
     // 调用processor.rs中的可用接口set_pid
-    processor::set_pid(init.pid()); 
+    processor::set_pid(init.pid());
     PROCESS_MANAGER.call_once(|| ProcessManager::new(init));
 }
 
@@ -34,7 +34,7 @@ pub fn get_process_manager() -> &'static ProcessManager {
 
 pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>, // 用读写锁保护的进程键值对
-    ready_queue: Mutex<VecDeque<ProcessId>>, // 用于进程管理的双端队列
+    ready_queue: Mutex<VecDeque<ProcessId>>,              // 用于进程管理的双端队列
 }
 
 impl ProcessManager {
@@ -65,7 +65,7 @@ impl ProcessManager {
     #[inline]
     pub fn get_proc(&self, pid: &ProcessId) -> Option<Arc<Process>> {
         self.processes.read().get(pid).cloned()
-    } 
+    }
 
     #[inline]
     pub fn pop_ready(&self) -> ProcessId {
@@ -150,12 +150,12 @@ impl ProcessManager {
 
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
         // FIXME: handle page fault
-        if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION) 
+        if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
             && !err_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
         {
             return false;
         } // 不是由于越权访问和写操作导致的 其他非预期错误 直接返回false
-        self.current().write().handle_page_fault(addr) 
+        self.current().write().handle_page_fault(addr)
         // 调用ProcessInner中的相应缺页处理函数
     } // 用于处理缺页异常的函数，在无法解决的情况下返回false，
     // 可能解决的情况：调用ProcessInner中的 handle_page_fault 函数

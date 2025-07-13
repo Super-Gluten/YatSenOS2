@@ -4,8 +4,8 @@ use uefi::proto::media::file::*;
 use uefi::proto::media::fs::SimpleFileSystem;
 use xmas_elf::ElfFile;
 
-use super::{AppList, App};
-use arrayvec::{ArrayVec, ArrayString};
+use super::{App, AppList};
+use arrayvec::{ArrayString, ArrayVec};
 
 /// Open root directory
 pub fn open_root() -> Directory {
@@ -76,7 +76,7 @@ pub fn free_elf(elf: ElfFile) {
 pub fn load_apps() -> AppList {
     let mut root = open_root();
     let mut buf = [0; 8];
-    let cstr_path = uefi::CStr16::from_str_with_buf("\\APP\\", &mut buf).unwrap(); 
+    let cstr_path = uefi::CStr16::from_str_with_buf("\\APP\\", &mut buf).unwrap();
     // cstr_path 已经定义好了，可以直接使用
 
     // let mut handle = { /* FIXME: get handle for \APP\ dir */};
@@ -108,7 +108,9 @@ pub fn load_apps() -> AppList {
         match info {
             Some(entry) => {
                 // let file = { /* FIXME: get handle for app binary file */ };
-                let file = handle.open(entry.file_name(), FileMode::Read, FileAttribute::empty()).unwrap();
+                let file = handle
+                    .open(entry.file_name(), FileMode::Read, FileAttribute::empty())
+                    .unwrap();
                 // 这里不会使用open_file()函数，因为它从根目录打开文件，而非当前的handle目录句柄
 
                 if file.is_directory().unwrap_or(true) {

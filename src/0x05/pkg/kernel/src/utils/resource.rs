@@ -1,8 +1,8 @@
-use alloc::string::String;
-use alloc::collections::BTreeMap;
-use spin::Mutex;
 use crate::drivers::input::try_pop_key;
+use alloc::collections::BTreeMap;
+use alloc::string::String;
 use pc_keyboard::DecodedKey;
+use spin::Mutex;
 
 #[derive(Debug, Clone)]
 pub enum StdIO {
@@ -70,7 +70,8 @@ impl Resource {
             Resource::Console(stdio) => match stdio {
                 StdIO::Stdin => {
                     // FIXME: just read from kernel input buffer
-                    if buf.len() < 4 { // 保证缓冲区能够写入UTF-8
+                    if buf.len() < 4 {
+                        // 保证缓冲区能够写入UTF-8
                         Some(0) // UTF-8最大字节数为4
                     } else {
                         match try_pop_key() {
@@ -84,7 +85,7 @@ impl Resource {
                     }
                 }
                 _ => None,
-            }
+            },
             Resource::Null => Some(0),
         }
     }

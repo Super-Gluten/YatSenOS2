@@ -9,7 +9,10 @@ pub use uefi::proto::console::gop::{GraphicsOutput, ModeInfo};
 use core::ptr::NonNull;
 use x86_64::VirtAddr;
 use x86_64::registers::control::Cr3;
-use x86_64::structures::paging::{OffsetPageTable, PageTable, page::{PageRangeInclusive, Page}};
+use x86_64::structures::paging::{
+    OffsetPageTable, PageTable,
+    page::{Page, PageRangeInclusive},
+};
 
 use arrayvec::{ArrayString, ArrayVec}; // 0x04新增App结构体
 use xmas_elf::ElfFile; // 0x04 新使用的ElfFile
@@ -27,18 +30,18 @@ extern crate log;
 
 pub type MemoryMap = ArrayVec<MemoryDescriptor, 256>;
 
-
 /// App information
-pub struct App { // 删除了App类型的生命周期
+pub struct App {
+    // 删除了App类型的生命周期
     /// The name of app
     pub name: ArrayString<16>,
     /// The ELF file
     pub elf: ElfFile<'static>, // 直接使用'static替换'a，声明ElfFiles为静态
-} 
+}
 
 pub const MAX_LIST_APP: usize = 16; // 使用const指定用户程序数组的最大长度，类型为usize
 pub type AppList = ArrayVec<App, MAX_LIST_APP>;
-pub type AppListRef = Option<&'static AppList> ; // .as_ref()返回Option<&T>
+pub type AppListRef = Option<&'static AppList>; // .as_ref()返回Option<&T>
 pub type KernelPages = ArrayVec<PageRangeInclusive, 8>; // 0x07 add: 传递内核的内存占用信息
 
 /// This structure represents the information that the bootloader passes to the kernel.

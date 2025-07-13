@@ -1,8 +1,8 @@
 use alloc::{collections::BTreeMap, sync::Arc};
 use spin::RwLock;
 use x86_64::structures::paging::{
-    page::{PageRange, PageRangeInclusive},
     Page,
+    page::{PageRange, PageRangeInclusive},
 };
 
 use super::*;
@@ -19,7 +19,7 @@ impl Default for ProcessData {
     fn default() -> Self {
         Self {
             env: Arc::new(RwLock::new(BTreeMap::new())),
-            resources: Arc::new(RwLock::new(ResourceSet::default())) // 0x04 add
+            resources: Arc::new(RwLock::new(ResourceSet::default())), // 0x04 add
         }
     }
 }

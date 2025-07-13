@@ -2,13 +2,13 @@ use core::sync::atomic::{AtomicU64, Ordering};
 
 use alloc::sync::Arc;
 use x86_64::{
-    structures::paging::{mapper::UnmapError, Page, Size4KiB},
     VirtAddr,
+    structures::paging::{Page, Size4KiB, mapper::UnmapError},
 };
 
 use super::{FrameAllocatorRef, MapperRef};
 
-use crate::proc::{processor ,KERNEL_PID};
+use crate::proc::{KERNEL_PID, processor};
 
 // user process runtime heap
 // 0x100000000 bytes -> 4GiB
@@ -73,7 +73,8 @@ impl Heap {
         // FIXME: calculate the difference between the current end and the new end
         let user_access = processor::get_pid() != KERNEL_PID; // 非内核进程，都是用户进程
         let current_end = self.end.load(Ordering::Relaxed);
-        let mut current_end_page: Page<Size4KiB> = Page::containing_address(VirtAddr::new(current_end));
+        let mut current_end_page: Page<Size4KiB> =
+            Page::containing_address(VirtAddr::new(current_end));
 
         if current_end != self.base.as_u64() {
             current_end_page += 1;
@@ -81,12 +82,12 @@ impl Heap {
 
         // 计算两者差距
         let difference: i64 = new_end.as_u64() as i64 - current_end as i64;
-        
+
         // NOTE: print the heap difference for debugging
         debug!(
-            "Heap difference: {:#x}, heap end addr: {:#x} -> {:#x}", 
-            difference.abs() as u64, 
-            current_end, 
+            "Heap difference: {:#x}, heap end addr: {:#x} -> {:#x}",
+            difference.abs() as u64,
+            current_end,
             new_end.as_u64()
         );
 
@@ -99,7 +100,8 @@ impl Heap {
         if difference > 0 {
             // heap[base, current_end, new_end] -> map [current_end, new_end - 1]
             let addr = current_end_page.start_address();
-            let count = (new_end_page.start_address().as_u64() - addr.as_u64()) / crate::memory::PAGE_SIZE;
+            let count =
+                (new_end_page.start_address().as_u64() - addr.as_u64()) / crate::memory::PAGE_SIZE;
             match elf::map_range(addr.as_u64(), count, mapper, alloc, user_access) {
                 Ok(range) => {
                     debug!(
@@ -112,7 +114,7 @@ impl Heap {
                     return None;
                 }
             }
-        } else if difference < 0{
+        } else if difference < 0 {
             // heap[base, new_end, current_end] -> unmap [new_end, current_end -1]
             let range = Page::range_inclusive(new_end_page, current_end_page);
             match elf::unmap_range(range, mapper, alloc, user_access) {
@@ -127,7 +129,7 @@ impl Heap {
                     return None;
                 }
             }
-        } 
+        }
         // FIXME: update the end address
 
         self.end.store(new_end.as_u64(), Ordering::Relaxed);

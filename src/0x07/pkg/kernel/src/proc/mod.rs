@@ -9,28 +9,28 @@ mod vm;
 
 pub mod sync; // 0x05 add
 
+use crate::memory::PAGE_SIZE;
 use manager::*;
 use process::*;
-use vm::*;
 use processor::*; // 在switch函数中使用了proceeor相关的函数
 use sync::*; // 0x05 add
-use crate::memory::PAGE_SIZE;
+use vm::*;
 
 use alloc::string::String;
 pub use context::ProcessContext;
-pub use paging::PageTableContext;
 pub use data::ProcessData;
-pub use pid::ProcessId;
 pub use manager::ProcessManager;
+pub use paging::PageTableContext;
+pub use pid::ProcessId;
 
-use x86_64::structures::idt::PageFaultErrorCode;
 use x86_64::VirtAddr;
+use x86_64::structures::idt::PageFaultErrorCode;
 pub const KERNEL_PID: ProcessId = ProcessId(1); // 常量定义：内核进程pid为1
 
-use alloc::vec::Vec;
 use alloc::format;
 use alloc::string::ToString;
 use alloc::sync::{Arc, Weak};
+use alloc::vec::Vec;
 use xmas_elf::ElfFile;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -42,7 +42,8 @@ pub enum ProgramStatus {
 }
 
 /// init process manager
-pub fn init(boot_info: &'static boot::BootInfo) {  // 0x04 add parameter
+pub fn init(boot_info: &'static boot::BootInfo) {
+    // 0x04 add parameter
     // 0x07 add parameter:
     // FIXME: you may need to implement `init_kernel_vm` by yourself
     let proc_vm = ProcessVm::new(PageTableContext::new()).init_kernel_vm(&boot_info.kernel_pages);
@@ -50,12 +51,13 @@ pub fn init(boot_info: &'static boot::BootInfo) {  // 0x04 add parameter
     trace!("Init kernel vm: {:#?}", proc_vm);
 
     // kernel process
-    let kproc = { /* FIXME: create kernel process */ 
+    let kproc = {
+        /* FIXME: create kernel process */
         Process::new(
             "kernel".into(),
             None,
             Some(proc_vm), // 使用已经建好的proc_vm就好
-            Some(ProcessData::new())
+            Some(ProcessData::new()),
         )
     };
     // 0x07 add:
@@ -137,14 +139,12 @@ pub fn list_app() {
             println!(
                 "{}: {} , {}",
                 app.name,
-                format!("{} kb", elf.input.len()/1024 ), // 通过elf文件的读取长度计算实际大小
-                elf.header.pt2.entry_point() // elf头文件有入口点
+                format!("{} kb", elf.input.len() / 1024), // 通过elf文件的读取长度计算实际大小
+                elf.header.pt2.entry_point()              // elf头文件有入口点
             );
         }
-        
     });
 } // 0x04：用于列出当前系统中的所有用户程序和相关信息
-
 
 // 0x04 add: spawn && elf_spawn && read && write
 pub fn spawn(name: &str) -> Option<ProcessId> {
@@ -191,7 +191,7 @@ pub fn exit(ret: isize, context: &mut ProcessContext) {
 pub fn still_alive(pid: ProcessId) -> bool {
     x86_64::instructions::interrupts::without_interrupts(|| {
         // check if the process is still alive
-        match get_process_manager().get_proc(&pid){
+        match get_process_manager().get_proc(&pid) {
             Some(proc) => !proc.read().is_dead(),
             None => return false,
         }
@@ -244,7 +244,6 @@ pub fn sem_remove(key: u32) -> usize {
     })
 }
 
-
 pub fn sem_wait(key: u32, context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
@@ -272,12 +271,11 @@ pub fn sem_signal(key: u32, context: &mut ProcessContext) {
         match ret {
             SemaphoreResult::Ok => context.set_rax(0),
             SemaphoreResult::NotExist => context.set_rax(1),
-            SemaphoreResult::WakeUp(pid) => manager.wake_up(pid,None),
+            SemaphoreResult::WakeUp(pid) => manager.wake_up(pid, None),
             _ => unreachable!(),
         };
     })
 }
-
 
 // 0x07 add: brk
 pub fn brk(addr: Option<VirtAddr>) -> Option<VirtAddr> {

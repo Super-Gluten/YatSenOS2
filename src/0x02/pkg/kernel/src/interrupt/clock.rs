@@ -11,8 +11,8 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
 pub extern "x86-interrupt" fn clock_handler(_sf: InterruptStackFrame) {
     // 在禁用中断的上下文中执行，防止嵌套中断导致竞态条件
     x86_64::instructions::interrupts::without_interrupts(|| {
-        if inc_counter() % 0x100000 ==0 {
-        // if inc_counter() % 0x10000 == 0 {
+        if inc_counter() % 0x100000 == 0 {
+            // if inc_counter() % 0x10000 == 0 {
             info!("Tick! @{}", read_counter());
         }
         // 用于通知中断控制器中断处理已完成

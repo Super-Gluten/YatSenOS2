@@ -32,7 +32,6 @@ fn efi_main() -> Status {
     // 1. Load config
     let config = {
         /* FIXME: Load config file */
-        // 读取config路径并加载它
         let mut file = open_file(CONFIG_PATH);
         let buf = load_file(&mut file);
 
@@ -44,11 +43,10 @@ fn efi_main() -> Status {
     // 2. Load ELF files
     let elf = {
         /* FIXME: Load kernel elf file */
-        // 从 config.rs中读取内核存储地址
         let path = config.kernel_path;
         // 读取内核文件
-        let mut file = open_file(path);
-        let buf = load_file(&mut file);
+        let mut file = open_file( path );
+        let buf = load_file( &mut file );
         // 新建 ElfFile 结构体
         ElfFile::new(buf).unwrap()
     };
@@ -81,7 +79,6 @@ fn efi_main() -> Status {
 
     // FIXME: root page table is readonly, disable write protect (Cr0)
     unsafe {
-        // 使用remove去除Cr0的写保护
         Cr0::update(|f| f.remove(Cr0Flags::WRITE_PROTECT));
     }
 
@@ -103,38 +100,21 @@ fn efi_main() -> Status {
         config.physical_memory_offset,
         &mut page_table,
         &mut frame_allocator,
-        false // 0x04 add: 随着elf/lib.rs中的load_elf()改变，内核进程应为false
     );
 
     // FIXME: map kernel stack
-    // 0x07 redefine: 内核栈的自动增长
-    let (stack_start, stack_size) = if config.kernel_stack_auto_grow > 0 {
-    let init_size = config.kernel_stack_auto_grow;
-    let bottom_offset = (config.kernel_stack_size - init_size) * 0x1000;
-    let init_bottom = config.kernel_stack_address + bottom_offset;
-        (init_bottom, init_size)
-    } else {
-        (config.kernel_stack_address, config.kernel_stack_size)
-    };
-
-    match map_range(
-        stack_start,
+    // 由于 config中定义kernel_stack_auto_grow = 0, 即栈不会自动增长, 直接定义
+    // 然后使用elf中lib.rs中的map_range函数运行内核
+    let (stack_start_address, stack_size) = (config.kernel_stack_address, config.kernel_stack_size);
+    map_range(
+        stack_start_address,
         stack_size,
         &mut page_table,
         &mut frame_allocator,
-        false,
-    ) {
-        Ok(Range) => {
-            info!("Successfully mapper kernel stack: {:?} {:?}", Range.start, Range.end);
-        }
-        Err(e) => {
-            panic!("Failed to map kernel stack with error {:?}", e);
-        }
-    }
+    );
 
     // FIXME: recover write protect (Cr0)
     unsafe {
-        // 使用 insert还原Cr0的写保护
         Cr0::update(|f| f.insert(Cr0Flags::WRITE_PROTECT));
     }
     let kernel_pages = get_page_usage(&elf);

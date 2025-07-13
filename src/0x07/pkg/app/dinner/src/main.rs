@@ -1,9 +1,9 @@
 #![no_std]
 #![no_main]
 
-use lib::*;
-use lib::sync::*;
 use lib::sync::Semaphore;
+use lib::sync::*;
+use lib::*;
 
 extern crate lib;
 
@@ -19,7 +19,7 @@ fn main() -> isize {
         CHOPSTICK[i].init(1);
     } // 初始化筷子信号量
 
-    let help =r#"
+    let help = r#"
         请选择使用的函数，它们的介绍如下：\n
         函数1：一般情况，会造成死锁。\n
         函数2：要求奇数号哲学家先拿左边的筷子，然后拿右边的筷子；偶数号哲学家相反。\n
@@ -36,7 +36,7 @@ fn main() -> isize {
                 let pid = sys_fork();
                 if pid == 0 {
                     philosopher1(i);
-                    sys_exit(0); 
+                    sys_exit(0);
                 }
                 pids[i] = pid;
             }
@@ -87,10 +87,10 @@ fn main() -> isize {
 
 const SLEEP_TIME: u64 = 2;
 // 函数1：一般情况，会造成死锁。
-fn philosopher1(i: usize){
+fn philosopher1(i: usize) {
     let left = i;
     let right = (i + 1) % PHI_SIZE;
-    for _a in 0..20{
+    for _a in 0..20 {
         //thinking
         CHOPSTICK[left].wait();
         println!("Philosopher {} get chopstick {}", i, left);
@@ -108,15 +108,15 @@ fn philosopher1(i: usize){
     }
 }
 // 函数2：要求奇数号哲学家先拿左边的筷子，然后拿右边的筷子；偶数号哲学家相反。不存在饥饿和死锁。
-fn philosopher2(i: usize){
+fn philosopher2(i: usize) {
     let mut left = i;
     let mut right = (i + 1) % PHI_SIZE;
-    for _a in 0..5{
+    for _a in 0..5 {
         //thinking
         if i % 2 == 0 {
-            left  = left ^ right;
+            left = left ^ right;
             right = left ^ right;
-            left  = left ^ right;
+            left = left ^ right;
         } // 偶数号哲学家的左右可以认为是相反的
         CHOPSTICK[left].wait();
         println!("Philosopher {} get first chopstick {}", i, left);
@@ -125,9 +125,12 @@ fn philosopher2(i: usize){
         println!("Philosopher {} get second chopstick {}", i, right);
         sleep(SLEEP_TIME);
         //eating
-        unsafe{
+        unsafe {
             PHILOSOPHER[i] += 1;
-            println!("\x1b[32mPhilosopher {} is eating, he has eaten {} times.\x1b[0m", i, PHILOSOPHER[i]);
+            println!(
+                "\x1b[32mPhilosopher {} is eating, he has eaten {} times.\x1b[0m",
+                i, PHILOSOPHER[i]
+            );
         }
         CHOPSTICK[left].signal();
         println!("Philosopher {} release chopstick {}", i, left);
@@ -138,15 +141,15 @@ fn philosopher2(i: usize){
 }
 
 // 函数3：要求哲学家必须按照筷子从小到大拿去，会出现不公平甚至饥饿。
-fn philosopher3(i: usize){
+fn philosopher3(i: usize) {
     let mut left = i;
     let mut right = (i + 1) % PHI_SIZE;
-    for _a in 0..10{
+    for _a in 0..10 {
         //thinking
         if left > right {
-            left  = left ^ right;
+            left = left ^ right;
             right = left ^ right;
-            left  = left ^ right;
+            left = left ^ right;
         }
         CHOPSTICK[left].wait();
 
@@ -154,11 +157,14 @@ fn philosopher3(i: usize){
         CHOPSTICK[right].wait();
         sleep(SLEEP_TIME);
         //eating
-        unsafe{
+        unsafe {
             PHILOSOPHER[i] += 1;
-            println!("\x1b[32mPhilosopher {} is eating, he has eaten {} times.\x1b[0m", i, PHILOSOPHER[i]);
+            println!(
+                "\x1b[32mPhilosopher {} is eating, he has eaten {} times.\x1b[0m",
+                i, PHILOSOPHER[i]
+            );
         }
-        
+
         CHOPSTICK[left].signal();
         sleep(SLEEP_TIME);
         CHOPSTICK[right].signal();

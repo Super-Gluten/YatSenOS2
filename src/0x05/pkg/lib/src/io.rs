@@ -39,7 +39,7 @@ impl Stdin {
                         }
                         _ => {
                             line.push(ch as char);
-                            sys_write(1, &mut[ch]); // 写入一个字符ch
+                            sys_write(1, &mut [ch]); // 写入一个字符ch
                         }
                     };
                 }

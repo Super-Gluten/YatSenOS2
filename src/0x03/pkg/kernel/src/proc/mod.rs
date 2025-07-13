@@ -7,20 +7,20 @@ mod process;
 mod processor;
 mod vm;
 
+use crate::memory::PAGE_SIZE;
 use manager::*;
 use process::*;
-use vm::*;
 use processor::*; // 在switch函数中使用了proceeor相关的函数
-use crate::memory::PAGE_SIZE;
+use vm::*;
 
 use alloc::string::String;
 pub use context::ProcessContext;
-pub use paging::PageTableContext;
 pub use data::ProcessData;
+pub use paging::PageTableContext;
 pub use pid::ProcessId;
 
-use x86_64::structures::idt::PageFaultErrorCode;
 use x86_64::VirtAddr;
+use x86_64::structures::idt::PageFaultErrorCode;
 pub const KERNEL_PID: ProcessId = ProcessId(1); // 常量定义：内核进程pid为1
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -38,15 +38,16 @@ pub fn init() {
     trace!("Init kernel vm: {:#?}", proc_vm);
 
     // kernel process
-    let kproc = { /* FIXME: create kernel process */ 
+    let kproc = {
+        /* FIXME: create kernel process */
         Process::new(
             "kernel".into(),
             None,
             Some(proc_vm), // 使用已经建好的proc_vm就好
-            Some(ProcessData::new())
+            Some(ProcessData::new()),
         )
     };
-    manager::init(kproc); 
+    manager::init(kproc);
 
     info!("Process Manager Initialized.");
 }

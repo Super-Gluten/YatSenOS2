@@ -43,11 +43,12 @@ impl Semaphore {
     pub fn wait(&mut self, pid: ProcessId) -> SemaphoreResult {
         // FIXME: if the count is 0, then push pid into the wait queue
         //          return Block(pid)
-        
+
         if self.count == 0 {
             self.wait_queue.push_back(pid);
             return SemaphoreResult::Block(pid);
-        } // 当信号量为0的时候，阻塞对应需求
+        }
+        // 当信号量为0的时候，阻塞对应需求
         // FIXME: else decrease the count and return Ok
         else {
             self.count -= 1;
@@ -63,12 +64,12 @@ impl Semaphore {
         // FIXME: if the wait queue is not empty
         //          pop a process from the wait queue
         //          return WakeUp(pid)
-        
 
         if !self.wait_queue.is_empty() {
             let pid = self.wait_queue.pop_front().unwrap();
             return SemaphoreResult::WakeUp(pid);
-        } // 唤醒等待队列第一个进程
+        }
+        // 唤醒等待队列第一个进程
         // FIXME: else increase the count and return Ok
         else {
             self.count += 1;
@@ -88,7 +89,10 @@ impl SemaphoreSet {
 
         // FIXME: insert a new semaphore into the sems
         //          use `insert(/* ... */).is_none()`
-        return self.sems.insert(SemaphoreId::new(key), Mutex::new(Semaphore::new(value))).is_none();
+        return self
+            .sems
+            .insert(SemaphoreId::new(key), Mutex::new(Semaphore::new(value)))
+            .is_none();
     }
 
     pub fn remove(&mut self, key: u32) -> bool {
@@ -108,10 +112,8 @@ impl SemaphoreSet {
         match self.sems.get(&sid) {
             Some(sem) => {
                 sem.lock().wait(pid) // 调用上述的wait函数
-            },
-            None => {
-                SemaphoreResult::NotExist
             }
+            None => SemaphoreResult::NotExist,
         }
         // FIXME: return NotExist if the semaphore is not exist
     }
@@ -125,10 +127,8 @@ impl SemaphoreSet {
         match self.sems.get(&sid) {
             Some(sem) => {
                 sem.lock().signal() // 调用上述的signal函数
-            },
-            None => {
-                SemaphoreResult::NotExist
             }
+            None => SemaphoreResult::NotExist,
         }
         // FIXME: return NotExist if the semaphore is not exist
     }

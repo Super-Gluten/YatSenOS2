@@ -7,7 +7,7 @@ use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 use super::consts::*;
 use crate::drivers::{
     input::{Key, push_key},
-    serial::get_serial_for_sure
+    serial::get_serial_for_sure,
 };
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
@@ -47,14 +47,16 @@ fn receive() {
                             let ch = s.chars().next().unwrap();
                             push_key(DecodedKey::Unicode(ch));
                             input_buffer.clear();
-                        } 
-                    },
-                    Err(_) => if input_buffer.len() >= INPUT_BUFFER_SIZE {
-                        input_buffer.clear();
-                        info!("无效的UTF-8序列，已清空缓冲区");
+                        }
+                    }
+                    Err(_) => {
+                        if input_buffer.len() >= INPUT_BUFFER_SIZE {
+                            input_buffer.clear();
+                            info!("无效的UTF-8序列，已清空缓冲区");
+                        }
                     }
                 }
-            },
+            }
             _ => {
                 break; // 其他情况下继续累积字节，可能是不完整的UTF-8序列
             }

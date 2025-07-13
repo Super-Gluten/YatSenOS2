@@ -3,8 +3,8 @@ use crossbeam_queue::ArrayQueue;
 use lazy_static::lazy_static;
 use log::warn;
 // pc_keyboard：用于处理PC键盘输入的rust库
-use pc_keyboard::DecodedKey;
 use alloc::vec::Vec;
+use pc_keyboard::DecodedKey;
 
 // 输入类型定义
 // pub enum DecodedKey {

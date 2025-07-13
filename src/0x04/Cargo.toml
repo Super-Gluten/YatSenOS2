@@ -25,9 +25,6 @@ panic = "abort"
 inherits = "release"
 debug = true
 panic = "abort" 
-# 三个模式下都需要panic = "abort" 
-# 才能使用kernel/src/utils/macro.rs内自定义的panic_handler，
-# 否则会出现uefi的0.34版本错误
 
 [profile.release-with-debug.package."*"]
 debug = false
@@ -51,7 +48,7 @@ volatile = "0.6.1"
 x86 = "0.52"
 x86_64 = "0.15"
 xmas-elf = "0.10"
-uefi = { version = "0.34", default-features = false }
+uefi = { version = "0.34", default-features = false, features = ["alloc"] }
 chrono = { version = "0.4", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
 num_enum = { version = "0.7", default-features = false }

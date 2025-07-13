@@ -4,6 +4,7 @@
 extern crate alloc;
 extern crate lib;
 
+use alloc::string::String;
 use lib::*;
 
 static mut M: u64 = 0xdeadbeef;
@@ -14,6 +15,12 @@ fn main() -> isize {
 
     // do not alloc heap before `fork`
     // which may cause unexpected behavior since we won't copy the heap in `fork`
+    // let pid;
+    // {
+    //     let s = String::from("23336345");
+    //     pid = sys_fork();
+    //     println!("{}",s);
+    // }
     let pid = sys_fork();
 
     if pid == 0 {

@@ -32,7 +32,7 @@ pub fn new_test_thread(id: &str) -> ProcessId {
     proc_data.set_env("id", id);
 
     spawn_kernel_thread(
-        func::test, // 删去util::前缀 
+        func::test, // 删去util::前缀
         format!("#{}_test", id),
         Some(proc_data),
     )
@@ -53,11 +53,15 @@ fn wait(pid: ProcessId) {
     loop {
         // FIXME: try to get the status of the process
         // let status = manager::get_process_manager().get_proc(pid).read().status();
-        // if status == ProgramStatus::Dead 
-        
+        // if status == ProgramStatus::Dead
+
         // HINT: it's better to use the exit code
-        let exit_code = manager::get_process_manager().get_proc(&pid).unwrap().read().exit_code();
-         /* FIXME: is the process exited? */ 
+        let exit_code = manager::get_process_manager()
+            .get_proc(&pid)
+            .unwrap()
+            .read()
+            .exit_code();
+        /* FIXME: is the process exited? */
         if exit_code.is_none() {
             x86_64::instructions::hlt();
         } else {

@@ -1,4 +1,5 @@
-pub fn test() -> ! { // 简单的无限循环计数器，发散函数
+pub fn test() -> ! {
+    // 简单的无限循环计数器，发散函数
     let mut count = 0;
     let id;
     if let Some(id_env) = crate::proc::env("id") {
