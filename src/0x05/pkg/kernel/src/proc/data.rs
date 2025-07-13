@@ -1,8 +1,8 @@
 use alloc::{collections::BTreeMap, sync::Arc};
 use spin::RwLock;
 use x86_64::structures::paging::{
-    page::{PageRange, PageRangeInclusive},
     Page,
+    page::{PageRange, PageRangeInclusive},
 };
 
 use super::*;

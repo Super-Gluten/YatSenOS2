@@ -1,6 +1,10 @@
 use x86_64::{
-    structures::paging::{mapper::{MapToError, UnmapError}, page::*, Page},
     VirtAddr,
+    structures::paging::{
+        Page,
+        mapper::{MapToError, UnmapError},
+        page::*,
+    },
 };
 
 use super::{FrameAllocatorRef, MapperRef};
@@ -17,7 +21,7 @@ pub const STACK_START_MASK: u64 = !(STACK_MAX_SIZE - 1); // 用于对齐栈底�
 // 用于将地址向下对齐到4GB边界
 
 // [bot..0x2000_0000_0000..top..0x3fff_ffff_ffff]
-// init stack 
+// init stack
 // 请注意用户栈向下增长
 pub const STACK_DEF_BOT: u64 = STACK_MAX - STACK_MAX_SIZE; // 用户栈栈底地址
 pub const STACK_DEF_PAGE: u64 = 1; // 默认用户栈分配栈的页数
@@ -125,12 +129,12 @@ impl Stack {
         let count_alloc = (self.range.start - aim_page)
             .try_into()
             .expect("Failed to convert u64 to usize"); // 计算需要增长的页面数量
-        // let new_page = elf::map_range(addr.as_u64(), count_alloc, mapper, alloc)?; 
+        // let new_page = elf::map_range(addr.as_u64(), count_alloc, mapper, alloc)?;
         // 这里不能采用addr.as_u64()，而应该采用包含addr的页面的起始地址作为正确的u64传入
         let new_page = elf::map_range(
-            aim_page.start_address().as_u64(), 
-            count_alloc, 
-            mapper, 
+            aim_page.start_address().as_u64(),
+            count_alloc,
+            mapper,
             alloc,
             true,
         )?;
@@ -141,8 +145,9 @@ impl Stack {
 
         if self.usage % 100 == 0 || self.usage == 1 {
             info!(
-                "Grow Stack: new start {:?}, end {:?}, usage {:?} pages", 
-                self.range.start, self.range.end, self.usage);
+                "Grow Stack: new start {:?}, end {:?}, usage {:?} pages",
+                self.range.start, self.range.end, self.usage
+            );
         } // 只有第一次堆栈和达到几百次堆栈时才输出堆栈信息
         Ok(())
     }
@@ -167,26 +172,27 @@ impl Stack {
             child_stack_usage,
             mapper,
             alloc,
-            true
-            ).is_err() {
-                trace!("Map thread stack to {:#x} failed.", child_stack_top);
-                child_stack_top -= STACK_MAX_SIZE; // 栈区向低位增长
-            };
+            true,
+        )
+        .is_err()
+        {
+            trace!("Map thread stack to {:#x} failed.", child_stack_top);
+            child_stack_top -= STACK_MAX_SIZE; // 栈区向低位增长
+        }
         // FIXME: return the new stack
         self.clone_range(
             self.range.start.start_address().as_u64(),
             child_stack_top.as_u64(),
-            child_stack_usage
+            child_stack_usage,
         );
         let child_range_start = Page::containing_address(child_stack_top);
         let child_range_end = child_range_start + child_stack_usage;
         let child_range = Page::range(child_range_start, child_range_end);
         Self {
             range: child_range,
-            usage: child_stack_usage
+            usage: child_stack_usage,
         }
     }
-
 
     /// Clone a range of memory
     ///
@@ -205,7 +211,7 @@ impl Stack {
     }
 
     // 0x07 add:释放栈区页面
-        pub fn clean_up(
+    pub fn clean_up(
         &mut self,
         // following types are defined in
         //   `pkg/kernel/src/proc/vm/mod.rs`

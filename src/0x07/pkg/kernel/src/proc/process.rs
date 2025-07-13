@@ -1,10 +1,10 @@
 use super::*;
-use crate::memory::*;
 use crate::humanized_size;
-use vm::*;
-use alloc::sync::{Weak, Arc};
+use crate::memory::*;
+use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::*;
+use vm::*;
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::*;
@@ -108,17 +108,13 @@ impl Process {
         let child_pid = ProcessId::new(); // 为子进程分配一个pid
         debug!(
             "Parent process: {} has forked {} with name {}",
-            inner.name,
-            child_pid,
-            child_inner.name
+            inner.name, child_pid, child_inner.name
         );
         // FIXME: make the arc of child
-        let child_process = Arc::new(
-            Self{
-                pid: child_pid,
-                inner: Arc::new(RwLock::new(child_inner))
-            }
-        ); // 仿照new方法的末尾的直接创建方法
+        let child_process = Arc::new(Self {
+            pid: child_pid,
+            inner: Arc::new(RwLock::new(child_inner)),
+        }); // 仿照new方法的末尾的直接创建方法
 
         // FIXME: add child to current process's children list
         inner.children.push(child_process.clone()); // 注意这里同样要压入克隆体，不然会返回值出现借用错误
@@ -180,7 +176,7 @@ impl ProcessInner {
     pub(super) fn save(&mut self, context: &ProcessContext) {
         // FIXME: save the process's context
         if self.is_dead() {
-            return ;
+            return;
         }
         self.context.save(context); // 使用ProcessContext中定义的方法 save保存上下文
         self.pause(); // 调用方法pause()设置进程状态为 ready
@@ -191,9 +187,9 @@ impl ProcessInner {
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
         // FIXME: restore the process's context
         self.context.restore(context); // 同样调用对应结构体方法 restore写入上下文
-        
+
         // FIXME: restore the process's page table
-        self.vm_mut().page_table.load();  // .vm_mut()得到ProcessVm, .load()调用对应PageTable方法加载上下文
+        self.vm_mut().page_table.load(); // .vm_mut()得到ProcessVm, .load()调用对应PageTable方法加载上下文
         // ？这里需要使用vm_mut()吗？还是vm()就足以
         self.resume(); // 将进程的状态设置为 Running
     } // context是需要恢复的的上下文
@@ -237,7 +233,7 @@ impl ProcessInner {
 
         // FIXME: update `rsp` in interrupt stack frame
         let mut child_context: ProcessContext = self.context;
-        let child_stack_top = ( self.context.get_stack_top() & 0xFFFF_FFFF)
+        let child_stack_top = (self.context.get_stack_top() & 0xFFFF_FFFF)
             | (child_vm.stack_start().as_u64() & STACK_START_MASK);
         child_context.update_rsp(child_stack_top);
         // FIXME: set the return value 0 for child with `context.set_rax`
@@ -255,7 +251,7 @@ impl ProcessInner {
             context: child_context,
             exit_code: None,
             proc_data: child_data,
-            proc_vm: Some(child_vm)
+            proc_vm: Some(child_vm),
         } // 仿照process中的new方法中新建一个inner结构体
     }
 
@@ -285,7 +281,7 @@ impl ProcessInner {
     }
 
     // 0x07 add: brk的逐层调用
-    pub fn brk(&self, addr: Option<VirtAddr>) -> Option<VirtAddr>{
+    pub fn brk(&self, addr: Option<VirtAddr>) -> Option<VirtAddr> {
         self.proc_vm.as_ref().unwrap().brk(addr)
     }
 }
@@ -315,7 +311,6 @@ impl core::ops::DerefMut for ProcessInner {
             .expect("Process data empty. The process may be killed.")
     }
 }
-
 
 impl core::fmt::Debug for Process {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {

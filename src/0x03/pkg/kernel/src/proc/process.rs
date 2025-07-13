@@ -1,9 +1,9 @@
 use super::*;
 use crate::memory::*;
-use vm::*;
-use alloc::sync::{Weak, Arc};
+use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::*;
+use vm::*;
 use x86_64::structures::paging::mapper::MapToError;
 use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::*;
@@ -143,7 +143,7 @@ impl ProcessInner {
     pub(super) fn save(&mut self, context: &ProcessContext) {
         // FIXME: save the process's context
         if self.status == ProgramStatus::Dead {
-            return ;
+            return;
         }
         self.context.save(context); // 使用ProcessContext中定义的方法 save保存上下文
         self.pause(); // 调用方法pause()设置进程状态为 ready
@@ -154,9 +154,9 @@ impl ProcessInner {
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
         // FIXME: restore the process's context
         self.context.restore(context); // 同样调用对应结构体方法 restore写入上下文
-        
+
         // FIXME: restore the process's page table
-        self.vm_mut().page_table.load();  // .vm_mut()得到ProcessVm, .load()调用对应PageTable方法加载上下文
+        self.vm_mut().page_table.load(); // .vm_mut()得到ProcessVm, .load()调用对应PageTable方法加载上下文
         // ？这里需要使用vm_mut()吗？还是vm()就足以
         self.resume(); // 将进程的状态设置为 Running
     } // context是需要恢复的的上下文
@@ -209,7 +209,6 @@ impl core::ops::DerefMut for ProcessInner {
             .expect("Process data empty. The process may be killed.")
     }
 }
-
 
 impl core::fmt::Debug for Process {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {

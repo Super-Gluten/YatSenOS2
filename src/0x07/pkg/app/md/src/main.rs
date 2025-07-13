@@ -1,8 +1,8 @@
 #![no_std]
 #![no_main]
 
-use lib::*;
 use lib::sync::Semaphore;
+use lib::*;
 
 extern crate lib;
 

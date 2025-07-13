@@ -1,8 +1,8 @@
 use crate::memory::*;
+use core::arch::asm;
 use x86_64::VirtAddr;
 use x86_64::registers::control::Cr2;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
-use core::arch::asm;
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     // set_handler_fn是将特定中断、异常绑定到自定义处理函数的方法
@@ -75,7 +75,7 @@ pub extern "x86-interrupt" fn general_protection_fault_handler(
     error!("- RIP: {:#x}", stack_frame.instruction_pointer);
     error!("- RAX: {:#x}", rax);
     error!("- RCX: {:#x}", rcx);
-    error!("- Target Address: {:#x}", rax + rcx + 0xb0);  // 计算目标地址
+    error!("- Target Address: {:#x}", rax + rcx + 0xb0); // 计算目标地址
     error!("- Error Code: {:#x}", err_code);
 
     panic!("EXCEPTION: GENERAL PROTECTION FAULT");

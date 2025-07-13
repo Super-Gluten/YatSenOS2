@@ -18,7 +18,11 @@ impl SpinLock {
 
     pub fn acquire(&self) {
         // FIXME: acquire the lock, spin if the lock is not available
-        while self.bolt.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst) == Err(true) {
+        while self
+            .bolt
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            == Err(true)
+        {
             core::hint::spin_loop(); // 这里采用的是自旋等待，告知CPU其处于忙等待状态
         } // 原子性检查锁是否处于锁定态，未锁定的情况下更新为锁定态。 
     }

@@ -3,7 +3,7 @@ use core::sync::atomic::{AtomicU16, Ordering};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ProcessId(pub u16);
 
-static COUNTER : AtomicU16 = AtomicU16::new(1);
+static COUNTER: AtomicU16 = AtomicU16::new(1);
 // 调用一个静态的原子变量作为PID的计数
 // 初始定义为1是因为在mod.rs中，常量定义了KERNEL_PID 为1，保持一致
 

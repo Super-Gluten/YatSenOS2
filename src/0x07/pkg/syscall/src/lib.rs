@@ -19,7 +19,7 @@ pub enum Syscall {
     WaitPid = 61,
 
     Time = 201,
-    
+
     ListApp = 65531,
     Stat = 65532,
     Allocate = 65533,

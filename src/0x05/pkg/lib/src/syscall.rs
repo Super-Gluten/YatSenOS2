@@ -1,5 +1,5 @@
-use syscall_def::Syscall;
 use core::time::Duration;
+use syscall_def::Syscall;
 
 #[inline(always)]
 pub fn sys_write(fd: u8, buf: &[u8]) -> Option<usize> {

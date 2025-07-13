@@ -12,6 +12,3 @@ unsafe impl FrameAllocator<Size4KiB> for UEFIFrameAllocator {
         Some(frame)
     }
 }
-/*为 uefi crate 中的 UEFIFrameAllocator
-实现 x86_64 crate 所定义的 FrameAllocator<Size4KiB> trait，
-以便在页面分配、页表映射时使用。*/

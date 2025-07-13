@@ -103,15 +103,15 @@ fn efi_main() -> Status {
         config.physical_memory_offset,
         &mut page_table,
         &mut frame_allocator,
-        false // 0x04 add: 随着elf/lib.rs中的load_elf()改变，内核进程应为false
+        false, // 0x04 add: 随着elf/lib.rs中的load_elf()改变，内核进程应为false
     );
 
     // FIXME: map kernel stack
     // 0x07 redefine: 内核栈的自动增长
     let (stack_start, stack_size) = if config.kernel_stack_auto_grow > 0 {
-    let init_size = config.kernel_stack_auto_grow;
-    let bottom_offset = (config.kernel_stack_size - init_size) * 0x1000;
-    let init_bottom = config.kernel_stack_address + bottom_offset;
+        let init_size = config.kernel_stack_auto_grow;
+        let bottom_offset = (config.kernel_stack_size - init_size) * 0x1000;
+        let init_bottom = config.kernel_stack_address + bottom_offset;
         (init_bottom, init_size)
     } else {
         (config.kernel_stack_address, config.kernel_stack_size)
@@ -125,7 +125,10 @@ fn efi_main() -> Status {
         false,
     ) {
         Ok(Range) => {
-            info!("Successfully mapper kernel stack: {:?} {:?}", Range.start, Range.end);
+            info!(
+                "Successfully mapper kernel stack: {:?} {:?}",
+                Range.start, Range.end
+            );
         }
         Err(e) => {
             panic!("Failed to map kernel stack with error {:?}", e);
@@ -155,7 +158,7 @@ fn efi_main() -> Status {
         memory_map: mmap.entries().copied().collect(),
         physical_memory_offset: config.physical_memory_offset,
         system_table,
-        loaded_apps : apps, // 0x04 将上文加载的用户程序信息传递给内核
+        loaded_apps: apps, // 0x04 将上文加载的用户程序信息传递给内核
         kernel_pages: kernel_pages,
     };
 

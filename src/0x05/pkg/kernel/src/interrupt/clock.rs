@@ -3,9 +3,9 @@ use super::consts::*;
 use core::sync::atomic::{AtomicU64, Ordering};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
-use crate::utils::regs::*;
 use crate::memory::gdt; // 在设置中断栈的时候需要使用对应的中断栈栈号
-use crate::proc::ProcessContext; // 在as_handler需要进程上下文
+use crate::proc::ProcessContext;
+use crate::utils::regs::*; // 在as_handler需要进程上下文
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     // 以偏移量的方式设置中断号，这里的实际中断向量号为32

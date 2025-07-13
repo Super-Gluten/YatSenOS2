@@ -103,7 +103,7 @@ fn efi_main() -> Status {
         config.physical_memory_offset,
         &mut page_table,
         &mut frame_allocator,
-        false // 0x04 add: 随着elf/lib.rs中的load_elf()改变，内核进程应为false
+        false, // 0x04 add: 随着elf/lib.rs中的load_elf()改变，内核进程应为false
     );
 
     // FIXME: map kernel stack
@@ -140,7 +140,7 @@ fn efi_main() -> Status {
         memory_map: mmap.entries().copied().collect(),
         physical_memory_offset: config.physical_memory_offset,
         system_table,
-        loaded_apps : apps, // 0x04 将上文加载的用户程序信息传递给内核
+        loaded_apps: apps, // 0x04 将上文加载的用户程序信息传递给内核
     };
 
     // align stack to 8 bytes

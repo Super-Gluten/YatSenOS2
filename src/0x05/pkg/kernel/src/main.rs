@@ -1,9 +1,9 @@
 #![no_std]
 #![no_main]
 
+use log::info;
 use ysos::*;
 use ysos_kernel as ysos;
-use log::info;
 
 extern crate alloc;
 

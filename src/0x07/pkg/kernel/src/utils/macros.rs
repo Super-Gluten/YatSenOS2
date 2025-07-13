@@ -1,5 +1,5 @@
-use crate::serial::SERIAL;
 use crate::drivers::serial::get_serial;
+use crate::serial::SERIAL;
 use core::fmt::*;
 use x86_64::instructions::interrupts;
 /// Use spin mutex to control variable access

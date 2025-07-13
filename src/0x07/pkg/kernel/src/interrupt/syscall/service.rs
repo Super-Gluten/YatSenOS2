@@ -1,9 +1,9 @@
 use core::alloc::Layout;
 
-use crate::proc::*;
-use crate::utils::*;
 use crate::memory::*;
 use crate::proc;
+use crate::proc::*;
+use crate::utils::*;
 
 use super::SyscallArgs;
 use x86_64::VirtAddr;
@@ -14,11 +14,10 @@ pub fn spawn_process(args: &SyscallArgs) -> usize {
     //       - core::str::from_utf8_unchecked
     //       - core::slice::from_raw_parts
     let name = unsafe {
-        core::str::from_utf8_unchecked(
-            core::slice::from_raw_parts(
-                args.arg0 as *const u8, args.arg1
-            )
-        )
+        core::str::from_utf8_unchecked(core::slice::from_raw_parts(
+            args.arg0 as *const u8,
+            args.arg1,
+        ))
     };
     // FIXME: spawn the process by name
     // FIXME: handle spawn error, return 0 if failed
@@ -27,14 +26,13 @@ pub fn spawn_process(args: &SyscallArgs) -> usize {
         Some(pid) => return pid.0 as usize,
         _ => return 0,
     }
-    
 }
 
 pub fn sys_write(args: &SyscallArgs) -> usize {
     // FIXME: get buffer and fd by args
     //       - core::slice::from_raw_parts
     let fd = args.arg0 as u8;
-    let buf = unsafe{core::slice::from_raw_parts(args.arg1 as *const u8, args.arg2)};
+    let buf = unsafe { core::slice::from_raw_parts(args.arg1 as *const u8, args.arg2) };
     // FIXME: call proc::write -> isize
     // FIXME: return the result as usize
     proc::write(fd, buf) as usize
@@ -43,8 +41,8 @@ pub fn sys_write(args: &SyscallArgs) -> usize {
 pub fn sys_read(args: &SyscallArgs) -> usize {
     // FIXME: just like sys_write
     let fd = args.arg0 as u8;
-    let buf = unsafe{core::slice::from_raw_parts_mut(args.arg1 as *mut u8, args.arg2)};
-    proc::read(fd, buf) as usize    
+    let buf = unsafe { core::slice::from_raw_parts_mut(args.arg1 as *mut u8, args.arg2) };
+    proc::read(fd, buf) as usize
 }
 
 // ret: arg0 as isize
@@ -107,7 +105,7 @@ pub fn list_app() {
 }
 
 // None -> pid: u16 or 0 or -1
-pub fn sys_fork(context: &mut ProcessContext){
+pub fn sys_fork(context: &mut ProcessContext) {
     proc::fork(context);
 }
 
@@ -126,7 +124,7 @@ pub fn sys_sem(args: &SyscallArgs, context: &mut ProcessContext) {
 pub fn sys_time() -> u64 {
     let time = uefi::runtime::get_time().unwrap();
     let secs = time.hour() as u64 * 3600 + time.minute() as u64 * 60 + time.second() as u64;
-    let msecs = time.nanosecond() / 1_000_000; 
+    let msecs = time.nanosecond() / 1_000_000;
     secs * 1000 + msecs as u64
 }
 
