@@ -13,12 +13,4 @@ x86 = { workspace = true }
 x86_64 = { workspace = true }
 log = { workspace = true }
 bitflags = { workspace = true }
-bit_field = { workspace = true }
 libm = { workspace = true }
-linked_list_allocator = { workspace = true }
-volatile = { workspace = true, version = "0.6.1" }
-crossbeam-queue = { workspace = true, version = "0.3", default-features = false, features = ["alloc"] }
-pc-keyboard = "0.8.0"
-
-xmas-elf = { workspace = true}
-syscall_def = { workspace = true }
