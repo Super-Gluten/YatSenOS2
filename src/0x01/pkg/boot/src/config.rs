@@ -30,6 +30,7 @@ const DEFAULT_CONFIG: Config = Config {
 };
 
 impl<'a> Config<'a> {
+    /// Parses bootloader config file content into Config struct
     pub fn parse(content: &'a [u8]) -> Self {
         let content = core::str::from_utf8(content).expect("failed to parse config as utf8");
         let mut config = DEFAULT_CONFIG;
@@ -47,6 +48,7 @@ impl<'a> Config<'a> {
         config
     }
 
+    /// Processes single key-value config entry and updates Config
     fn process(&mut self, key: &str, value: &'a str) {
         info!("parse {} = {}", key, value);
         let r10 = u64::from_str(value).unwrap_or(0);

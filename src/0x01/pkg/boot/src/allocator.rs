@@ -5,6 +5,7 @@ use x86_64::{PhysAddr, structures::paging::*};
 pub struct UEFIFrameAllocator;
 
 unsafe impl FrameAllocator<Size4KiB> for UEFIFrameAllocator {
+    /// using UEFI boot services to allocate a single 4KiB physical memory frame 
     fn allocate_frame(&mut self) -> Option<PhysFrame> {
         let addr = uefi::boot::allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, 1)
             .expect("Failed to allocate frame");

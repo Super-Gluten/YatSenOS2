@@ -40,17 +40,8 @@ pub fn init(boot_info: &'static BootInfo) {
         uefi::table::set_system_table(boot_info.system_table.cast().as_ptr());
     }
 
-    serial::init(); // init serial output
-    logger::init(); // init logger system
-    memory::address::init(boot_info);
-    memory::gdt::init(); // init gdt
-    memory::allocator::init(); // init kernel heap allocator
-    interrupt::init(); // init interrupts
-    proc::init(boot_info); // init proc
-    memory::init(boot_info); // init memory manager
-
-    x86_64::instructions::interrupts::enable();
-    info!("Interrupts Enabled.");
+    drivers::serial::init(); // init serial output
+    logger::init("info"); // init logger system
 
     info!("YatSenOS initialized.");
 

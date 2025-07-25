@@ -15,8 +15,11 @@ use arrayvec::{ArrayString, ArrayVec}; // 0x04新增App结构体
 use xmas_elf::ElfFile; // 0x04 新使用的ElfFile
 use xmas_elf::program::ProgramHeader;
 
+/// using uefi allocator
 pub mod allocator;
+/// the config for the bootloader
 pub mod config;
+/// the functions for the bootloader
 pub mod fs;
 
 pub use allocator::*;

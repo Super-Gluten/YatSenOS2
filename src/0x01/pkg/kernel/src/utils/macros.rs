@@ -63,8 +63,7 @@ pub fn print_internal(args: Arguments) {
     });
 }
 
-#[allow(dead_code)]
-#[cfg(all(target_os = "none"))]
+#[cfg(target_os = "none")]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     unsafe { SERIAL.get().unwrap().force_unlock() };
