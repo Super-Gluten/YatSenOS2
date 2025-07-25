@@ -1,36 +1,38 @@
 use log::{Level, LevelFilter, Metadata, Record};
 
-pub fn init() {
+pub fn init(level_filter: &str) {
     static LOGGER: Logger = Logger;
     log::set_logger(&LOGGER).expect("Failed to set logger");
 
-    // FIXME: Configure the logger
-
-    // 在debug构建中，用trace记录包含详细调试信息的所有日志
-    #[cfg(debug_assertions)]
-    log::set_max_level(LevelFilter::Trace);
-
-    // 在release构建中，只使用info记录重要日志
-    #[cfg(not(debug_assertions))]
-    log::set_max_level(LevelFilter::Info);
-
-    // 输出日志系统初始化成功的消息
+    match level_filter {
+        "info" => {
+            log::set_max_level(LevelFilter::Info);
+        }
+        "debug" => {
+            log::set_max_level(LevelFilter::Debug);
+        }
+        "trace" => {
+            log::set_max_level(LevelFilter::Trace);
+        }
+        _ => {
+            log::set_max_level(LevelFilter::Error);
+            error!("the Logger LevelFilter is wrong!");
+        }
+    }
     info!("Logger Initialized.");
 }
 
 struct Logger;
 
 impl log::Log for Logger {
-    // 默认了日志级别都在允许的范围内（可修改？
-    fn enabled(&self, _metadata: &Metadata) -> bool {
-        true
+    fn enabled(&self, metadata: &Metadata) -> bool {
+        metadata.level() <= log::max_level()
     }
 
+    // handle serial output with different color
+    //
+    // control logs in different levels with function: enable()
     fn log(&self, record: &Record) {
-        // FIXME: Implement the logger with serial output
-
-        // 使用self.enabled(record.metadata())
-        // 来判断当前日志是否需要输出
         if !self.enabled(record.metadata()) {
             return;
         }
@@ -39,7 +41,7 @@ impl log::Log for Logger {
             pub const RED: &str = "\x1b[31m";
             pub const YELLOW: &str = "\x1b[33m";
             pub const GREEN: &str = "\x1b[32m";
-            pub const DYAN: &str = "\x1b[36m"; // 青色
+            pub const CYAN: &str = "\x1b[36m"; // 青色
             pub const WHITE: &str = "\x1b[37m";
             pub const RESET: &str = "\x1b[0m";
         }
@@ -48,25 +50,23 @@ impl log::Log for Logger {
             log::Level::Error => colors::RED,
             log::Level::Warn => colors::YELLOW,
             log::Level::Info => colors::GREEN,
-            log::Level::Debug => colors::DYAN,
+            log::Level::Debug => colors::CYAN,
             log::Level::Trace => colors::WHITE,
         };
         let reset_code = colors::RESET;
 
-        // 使用reco.file_static()和record.line()
-        // 获取源文件的位置信息
-
-        // println!格式为：[时间][级别名称][位置][模块]
-        println! {
-            "{}{:5}{} [{}{}][{}] {}",
-            reset_code,
-            record.level(),
+        println!(
+            "{}{:5}{} [{}:{}] [{}]:  {}{:#?}{}",
             color_code,
-            record.file_static().unwrap(),
-            record.line().unwrap(),
-            record.target(),
-            record.args()
-        };
+            record.level(),
+            colors::RESET,
+            record.file().unwrap_or("unknown"), // 安全处理文件位置
+            record.line().unwrap_or(0), // 安全处理文件行号
+            record.target(), // 模块路径
+            color_code,
+            record.args(), // 日志具体内容
+            colors::RESET
+        );
     }
 
     fn flush(&self) {}

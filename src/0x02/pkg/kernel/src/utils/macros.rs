@@ -1,5 +1,5 @@
+use crate::drivers::serial::SERIAL;
 use crate::drivers::serial::get_serial;
-use crate::serial::SERIAL;
 use core::fmt::*;
 use x86_64::instructions::interrupts;
 /// Use spin mutex to control variable access
@@ -63,12 +63,10 @@ pub fn print_internal(args: Arguments) {
     });
 }
 
-#[allow(dead_code)]
-#[cfg_attr(target_os = "none", panic_handler)]
+#[cfg(target_os = "none")]
+#[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    // force unlock serial for panic output
     unsafe { SERIAL.get().unwrap().force_unlock() };
-
     error!("ERROR: panic!\n\n{:#?}", info);
     loop {}
 }

@@ -104,6 +104,7 @@ pub fn load_elf(
 /// Load & Map ELF segment
 ///
 /// load segment to new frame and set page table
+/// information related to PageTableFlags can be found on https://os.phil-opp.com/zh-CN/paging-introduction/#di-zhi-zhuan-huan-fan-li
 fn load_segment(
     elf: &ElfFile,
     physical_offset: u64,
@@ -118,23 +119,18 @@ fn load_segment(
     let file_offset = segment.offset() & !0xfff;
     let virt_start_addr = VirtAddr::new(segment.virtual_addr());
 
-    // 初始化页表标志，包含PRESENT表示该页表项有效
     let mut page_table_flags = PageTableFlags::PRESENT;
 
-    // FIXME: handle page table flags with segment flags
-    // unimplemented!("Handle page table flags with segment flags!");
-    // 关于PageTableFlags的相关信息可在 https://os.phil-opp.com/zh-CN/paging-introduction/#di-zhi-zhuan-huan-fan-li 中找到
-    // 处理写权限，ELF 可写 -> 页表WRITALBE标志 -> 页表可写
+    // handle page table flags with segment flags
+    // write, execute, user_accessible
     if segment.flags().is_write() {
         page_table_flags |= PageTableFlags::WRITABLE;
     }
 
-    // ELF 不可执行 -> 页表NO_EXECUTE标志 -> 页表禁用执行
     if !segment.flags().is_execute() {
         page_table_flags |= PageTableFlags::NO_EXECUTE
     }
 
-    // 默认设置允许用户空间访问
     page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
 
     trace!("Segment page table flag: {:?}", page_table_flags);
