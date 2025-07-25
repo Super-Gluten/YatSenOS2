@@ -23,7 +23,7 @@ pub fn init(boot_info: &'static BootInfo) {
     }
 
     drivers::serial::init(); // init serial output
-    logger::init(); // init logger system
+    logger::init("info"); // init logger system
 
     info!("YatSenOS initialized.");
 }

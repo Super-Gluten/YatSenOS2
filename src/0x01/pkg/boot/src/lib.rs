@@ -12,8 +12,11 @@ use x86_64::VirtAddr;
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 
+/// using uefi allocator
 pub mod allocator;
+/// the config for the bootloader
 pub mod config;
+/// the functions for the bootloader
 pub mod fs;
 
 pub use allocator::*;

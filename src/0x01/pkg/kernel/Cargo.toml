@@ -9,7 +9,7 @@ script = "pkg/kernel/config/kernel.ld"
 
 [dependencies]
 boot = { workspace = true }
-uefi = { workspace = true }
+uefi = { workspace = true, default-features = false }
 paste = { workspace = true }
 spin = { workspace = true }
 x86 = { workspace = true }
