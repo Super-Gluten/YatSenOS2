@@ -8,7 +8,7 @@ once_mutex!(pub SERIAL: SerialPort);
 
 pub fn init() {
     init_SERIAL(SerialPort::new(SERIAL_IO_PORT));
-    let _ = get_serial_for_sure().init();
+    get_serial_for_sure().init().expect("the serial is failed to initialize");
 
     // escape sequence and print the sign
     println!("\x1B[2J\x1B[H");
