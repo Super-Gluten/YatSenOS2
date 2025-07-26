@@ -12,9 +12,7 @@ pub fn init() {
 
     // escape sequence and print the sign
     println!("\x1B[2J\x1B[H");
-    let student_num = "xxxxxxxx xxx";
-    println!("{}{}{}", "\x1b[36m", student_num, "\x1b[0m");
-    println!("{}", crate::get_ascii_header());
+    println!("{}{}{}", "\x1b[36m", crate::get_ascii_header(), "\x1b[0m");
     println!("[+] Serial Initialized.");
 }
 
