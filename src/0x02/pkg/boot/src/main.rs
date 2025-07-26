@@ -108,13 +108,16 @@ fn efi_main() -> Status {
     info!("Exiting boot services...");
 
     let mmap = unsafe { uefi::boot::exit_boot_services(MemoryType::LOADER_DATA) };
-    // NOTE: alloc & log are no longer available
+    // NOTE: alloc is no longer available
+    // implement: set log level
+    let log_level = config.log_level;
 
     // construct BootInfo
     let bootinfo = BootInfo {
         memory_map: mmap.entries().copied().collect(),
         physical_memory_offset: config.physical_memory_offset,
         system_table,
+        log_level,
     };
 
     // align stack to 8 bytes

@@ -1,10 +1,17 @@
 use log::{Level, LevelFilter, Metadata, Record};
+use boot::BootInfo;
 
-pub fn init(level_filter: &str) {
+pub fn init(boot_info: &'static BootInfo) {
     static LOGGER: Logger = Logger;
     log::set_logger(&LOGGER).expect("Failed to set logger");
 
-    match level_filter {
+    match boot_info.log_level {
+        "Error" => {
+            log::set_max_level(LevelFilter::Error);
+        }
+        "Warn" => {
+            log::set_max_level(LevelFilter::Warn);
+        }
         "info" => {
             log::set_max_level(LevelFilter::Info);
         }
