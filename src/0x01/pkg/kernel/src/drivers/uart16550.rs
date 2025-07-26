@@ -111,6 +111,7 @@ impl SerialPort {
     }
 
     /// Receives a byte on the serial port no wait.
+    #[allow(dead_code)]
     pub fn receive(&mut self) -> Option<u8> {
         unsafe {
             if self.line_status.read() & 1 != 0 {

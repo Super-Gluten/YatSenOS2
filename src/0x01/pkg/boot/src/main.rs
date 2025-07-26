@@ -6,8 +6,6 @@
 extern crate log;
 extern crate alloc;
 
-use alloc::boxed::Box;
-use alloc::vec;
 use elf::load_elf;
 use elf::map_physical_memory;
 use elf::map_range;
@@ -47,9 +45,9 @@ fn efi_main() -> Status {
         ElfFile::new(buf).unwrap()
     };
 
-    unsafe {
-        set_entry(elf.header.pt2.entry_point() as usize);
-    }
+    
+    set_entry(elf.header.pt2.entry_point() as usize);
+    
 
     // 3. Load MemoryMap
     let mmap = uefi::boot::memory_map(MemoryType::LOADER_DATA).expect("Failed to get memory map");
@@ -83,7 +81,7 @@ fn efi_main() -> Status {
         config.physical_memory_offset,
         &mut page_table,
         &mut frame_allocator,
-    );
+    ).expect("Failed to load elf in bootloader");
 
     // map kernel stack
     let (stack_start_address, stack_size) = (config.kernel_stack_address, config.kernel_stack_size);
@@ -92,7 +90,7 @@ fn efi_main() -> Status {
         stack_size,
         &mut page_table,
         &mut frame_allocator,
-    );
+    ).expect("Failed to map range in bootloader");
 
     // recover write protect (Cr0)
     unsafe {
