@@ -1,9 +1,9 @@
 const PORT: u16 = 0x3f8;
+use bitflags::bitflags;
 use core::fmt;
 use x86_64::instructions::port::Port;
-use bitflags::bitflags;
 
-bitflags!{
+bitflags! {
     /// definition of flag bits for line control register
     pub struct LineControlFlags: u8 {
         /// 数据位长度: 00 = 5位, 01 = 6位, 10 = 7位, 11 = 8位
@@ -33,7 +33,6 @@ bitflags!{
         const DLAB = 0b1000_0000;
     }
 }
-
 
 /// A port-mapped UART 16550 serial interface.
 pub struct SerialPort {
@@ -73,9 +72,10 @@ impl SerialPort {
 
             // 4. 设置线路控制寄存器: 8位数据, 无奇偶校验, 1位停止位
             self.line_control.write(
-                LineControlFlags::WORD_LENGTH_8.bits() | 
-                LineControlFlags::PARITY_DISABLE.bits() | 
-                LineControlFlags::STOP_BITS_1.bits());
+                LineControlFlags::WORD_LENGTH_8.bits()
+                    | LineControlFlags::PARITY_DISABLE.bits()
+                    | LineControlFlags::STOP_BITS_1.bits(),
+            );
             // self.line_control.write(0x03);
 
             // 5. 启用FIFO, 清空缓冲区, 14字节阈值

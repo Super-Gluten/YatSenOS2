@@ -1,5 +1,4 @@
 /// initialize the serial and print the sign
-
 use super::uart16550::SerialPort;
 
 const SERIAL_IO_PORT: u16 = 0x3F8; // COM1
@@ -8,7 +7,9 @@ once_mutex!(pub SERIAL: SerialPort);
 
 pub fn init() {
     init_SERIAL(SerialPort::new(SERIAL_IO_PORT));
-    get_serial_for_sure().init().expect("the serial is failed to initialize");
+    get_serial_for_sure()
+        .init()
+        .expect("the serial is failed to initialize");
 
     // escape sequence and print the sign
     println!("\x1B[2J\x1B[H");

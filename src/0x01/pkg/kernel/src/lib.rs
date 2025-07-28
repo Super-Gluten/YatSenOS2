@@ -14,7 +14,7 @@ pub use utils::*;
 mod drivers;
 
 use boot::BootInfo;
-use uefi::{runtime::ResetType, Status};
+use uefi::{Status, runtime::ResetType};
 
 pub fn init(boot_info: &'static BootInfo) {
     unsafe {
