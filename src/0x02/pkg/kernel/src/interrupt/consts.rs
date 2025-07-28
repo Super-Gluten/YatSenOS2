@@ -46,3 +46,10 @@ pub enum Irq {
     Error = 19,
     Spurious = 31,
 }
+
+/// Calculated the serial interrupt vector
+pub const SERIAL_INTERRUPT_VECTOR: u8 = Interrupts::IrqBase as u8 + Irq::Serial0 as u8;
+/// Calculated the clock interrupt vector
+pub const CLOCK_INTERRUPT_VECTOR: u8 = Interrupts::IrqBase as u8 + Irq::Timer as u8;
+/// Calculated new spurious interrupt vector
+pub const SPURIOUS_INTERRUPT_VECTOR: u32 = Interrupts::IrqBase as u32 + Irq::Spurious as u32;

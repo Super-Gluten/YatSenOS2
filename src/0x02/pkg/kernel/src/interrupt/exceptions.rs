@@ -49,34 +49,13 @@ pub extern "x86-interrupt" fn page_fault_handler(
     );
 }
 
-// pub extern "x86-interrupt" fn general_protection_fault_handler(
-//     stack_frame: InterruptStackFrame,
-//     err_code: u64,
-//     // 在 idt.rs中expected为u64而非PageFaultErrorCode
-// ) {
-//     panic!(
-//         "EXCEPTION: GENERAL PROTECTION FAULT, ERROR_CODE: 0x{:016x}\n\n{:#?}",
-//         err_code, stack_frame
-//     );
-// }
-
 pub extern "x86-interrupt" fn general_protection_fault_handler(
     stack_frame: InterruptStackFrame,
     err_code: u64,
+    // 在 idt.rs中expected为u64而非PageFaultErrorCode
 ) {
-    let rax: u64;
-    let rcx: u64;
-    unsafe {
-        asm!("mov {}, rax", out(reg) rax);
-        asm!("mov {}, rcx", out(reg) rcx);
-    }
-
-    error!("GPF DETAILS:");
-    error!("- RIP: {:#x}", stack_frame.instruction_pointer);
-    error!("- RAX: {:#x}", rax);
-    error!("- RCX: {:#x}", rcx);
-    error!("- Target Address: {:#x}", rax + rcx + 0xb0); // 计算目标地址
-    error!("- Error Code: {:#x}", err_code);
-
-    panic!("EXCEPTION: GENERAL PROTECTION FAULT");
+    panic!(
+        "EXCEPTION: GENERAL PROTECTION FAULT, ERROR_CODE: 0x{:016x}\n\n{:#?}",
+        err_code, stack_frame
+    );
 }

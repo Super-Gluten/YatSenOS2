@@ -1,5 +1,5 @@
-use log::{Level, LevelFilter, Metadata, Record};
 use boot::BootInfo;
+use log::{Level, LevelFilter, Metadata, Record};
 
 pub fn init(boot_info: &'static BootInfo) {
     static LOGGER: Logger = Logger;
@@ -68,8 +68,8 @@ impl log::Log for Logger {
             record.level(),
             colors::RESET,
             record.file().unwrap_or("unknown"), // 安全处理文件位置
-            record.line().unwrap_or(0), // 安全处理文件行号
-            record.target(), // 模块路径
+            record.line().unwrap_or(0),         // 安全处理文件行号
+            record.target(),                    // 模块路径
             color_code,
             record.args(), // 日志具体内容
             colors::RESET
