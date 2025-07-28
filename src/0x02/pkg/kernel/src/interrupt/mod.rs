@@ -29,7 +29,7 @@ pub fn init() {
     if XApic::support() {
         info!("XApic is supported");
         let cpuid = unsafe {
-            let mut apic = XApic::new(LAPIC_ADDR);
+            let mut apic = XApic::new(physical_to_virtual(LAPIC_ADDR));
             apic.cpu_init();
             apic.id() as u8
         }; // get current CPU's APIC ID
