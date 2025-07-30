@@ -1,12 +1,11 @@
 use alloc::vec::Vec;
 use core::str::from_utf8;
 use pc_keyboard::DecodedKey;
-use x86_64::instructions::port::Port;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 use super::consts::*;
 use crate::drivers::{
-    input::{Key, push_key},
+    input::push_key,
     serial::get_serial_for_sure,
 };
 
