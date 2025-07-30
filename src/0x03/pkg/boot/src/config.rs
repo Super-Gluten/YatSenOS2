@@ -17,6 +17,8 @@ pub struct Config<'a> {
     pub cmdline: &'a str,
     /// Load apps into memory, when no fs implemented in kernel
     pub load_apps: bool,
+    /// Log max level
+    pub log_level: &'a str,
 }
 
 const DEFAULT_CONFIG: Config = Config {
@@ -27,9 +29,11 @@ const DEFAULT_CONFIG: Config = Config {
     kernel_path: "\\KERNEL.ELF",
     cmdline: "",
     load_apps: false,
+    log_level: "info",
 };
 
 impl<'a> Config<'a> {
+    /// Parses bootloader config file content into Config struct
     pub fn parse(content: &'a [u8]) -> Self {
         let content = core::str::from_utf8(content).expect("failed to parse config as utf8");
         let mut config = DEFAULT_CONFIG;
@@ -47,6 +51,7 @@ impl<'a> Config<'a> {
         config
     }
 
+    /// Processes single key-value config entry and updates Config
     fn process(&mut self, key: &str, value: &'a str) {
         info!("parse {} = {}", key, value);
         let r10 = u64::from_str(value).unwrap_or(0);
@@ -65,10 +70,8 @@ impl<'a> Config<'a> {
             "kernel_stack_auto_grow" => self.kernel_stack_auto_grow = r10,
             "cmdline" => self.cmdline = value,
             "load_apps" => self.load_apps = r10 != 0,
+            "log_level" => self.log_level = value,
             _ => warn!("undefined config key: {}", key),
         }
     }
 }
-
-/*提供了一个读取并解析 boot.conf 的基本实现，
-可以使用它来自定义 bootloader 的行为、启动参数等等。*/

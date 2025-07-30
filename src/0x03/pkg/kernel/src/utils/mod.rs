@@ -1,7 +1,7 @@
 #[macro_use]
 mod macros;
 #[macro_use]
-pub mod regs; // 在clock.rs中调用了regs.rs，所以在这里把它设为公开
+pub mod regs;
 
 use alloc::format;
 pub mod func;
@@ -20,8 +20,7 @@ __  __      __  _____            ____  _____
  \  / __ `/ __/\__ \/ _ \/ __ \/ / / /\__ \
  / / /_/ / /_ ___/ /  __/ / / / /_/ /___/ /
 /_/\__,_/\__//____/\___/_/ /_/\____//____/
-
-            姓名：周海铭    学号：23336345
+        xxxxxxxx xxx
                                        v",
         env!("CARGO_PKG_VERSION")
     )

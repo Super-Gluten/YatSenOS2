@@ -12,17 +12,20 @@ pub enum Interrupts {
     InvalidOpcode = 6,
     DeviceNotAvailable = 7,
     DoubleFault = 8,
-    CoprocessorSegmentOverrun = 9,
+    // CoprocessorSegmentOverrun = 9,
     InvalidTSS = 10,
     SegmentNotPresent = 11,
     StackSegmentFault = 12,
     GeneralProtectionFault = 13,
     PageFault = 14,
-    FloatingPointException = 16,
+    X87FloatingPointException = 16,
     AlignmentCheck = 17,
     MachineCheck = 18,
     SIMDFloatingPointException = 19,
     VirtualizationException = 20,
+    ControlProtectionException = 21,
+    HypervisiorInjectionException = 28,
+    VMMCommunicationException = 29,
     SecurityException = 30,
 
     IrqBase = 0x20,
@@ -46,3 +49,10 @@ pub enum Irq {
     Error = 19,
     Spurious = 31,
 }
+
+/// Calculated the serial interrupt vector
+pub const SERIAL_INTERRUPT_VECTOR: u8 = Interrupts::IrqBase as u8 + Irq::Serial0 as u8;
+/// Calculated the clock interrupt vector
+pub const CLOCK_INTERRUPT_VECTOR: u8 = Interrupts::IrqBase as u8 + Irq::Timer as u8;
+/// Calculated new spurious interrupt vector
+pub const SPURIOUS_INTERRUPT_VECTOR: u32 = Interrupts::IrqBase as u32 + Irq::Spurious as u32;

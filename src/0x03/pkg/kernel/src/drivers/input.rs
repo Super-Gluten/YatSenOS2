@@ -5,11 +5,19 @@ use lazy_static::lazy_static;
 use log::warn;
 use pc_keyboard::DecodedKey;
 
+/// Type alias for key board input events
+///
+/// # Explain
+/// pub enum DecodedKey {
+///     Unicode(char),
+///     RawKey(KeyCode),
+/// }
+
 pub type Key = DecodedKey;
-// 自定义缓冲区大小为128
+/// Size of the input buffer (in number of key events)
 const BUFFER_SIZE: usize = 128;
 
-// 确保初始化（调试用）
+/// Lazy initialization of the global input buffer
 lazy_static! {
     static ref INPUT_BUF: ArrayQueue<Key> = {
         let queue = ArrayQueue::new(BUFFER_SIZE);
@@ -17,7 +25,7 @@ lazy_static! {
     };
 }
 
-// 将键压入输入缓冲区
+/// Push a key event info the input buffer
 #[inline]
 pub fn push_key(key: Key) {
     if INPUT_BUF.push(key).is_err() {
@@ -26,13 +34,12 @@ pub fn push_key(key: Key) {
     }
 }
 
-// 非阻塞地从缓冲区尝试取出一个键
-#[inline]
+/// Try to pop a key event from input buffer (non-blocking)
 pub fn try_pop_key() -> Option<Key> {
     INPUT_BUF.pop()
 }
 
-// 阻塞式地从缓冲区取出一个键（循环等待直到有数据）
+/// Pop a key event from input buffer (blocking)
 pub fn pop_key() -> Key {
     loop {
         if let Some(key) = try_pop_key() {
@@ -41,38 +48,46 @@ pub fn pop_key() -> Key {
     }
 }
 
-// 从缓冲区读取一行（阻塞直到遇到 '\n'）
+/// Read a line of input from the keyboard buffer
+///
+/// # Returns
+/// The collected line of text as a string
 pub fn get_line() -> String {
-    // 使用with_capacity预分配空间 并设置为String类型
     let mut line = String::with_capacity(BUFFER_SIZE);
     loop {
+        // debug_buffer();
         let key = pop_key();
+
         match key {
+            // Handle backspace/delete (remove last characters and update terminal display)
             DecodedKey::Unicode('\x08') | DecodedKey::Unicode('\x7F') => {
                 if !line.is_empty() {
                     line.pop();
                     backspace();
                 }
             }
+            // Handle newline (end of input)
             DecodedKey::Unicode('\n') | DecodedKey::Unicode('\r') => {
                 println!();
                 break;
             }
+
+            // Handle printable characters
             DecodedKey::Unicode(c) => {
                 if line.len() < BUFFER_SIZE {
                     line.push(c);
                     print!("{}", c);
                 }
             }
-            _ => continue,
+
+            _ => continue, // Ignore non-Unicode keys
         }
     }
     line
 }
 
-// 在终端执行退格操作
+/// Perform a backspace operation in the terminal
 fn backspace() {
-    // 发送退格序列：\x08 退格，\x20 空格，\x08 再退格
     print!("\x08");
     print!("\x20");
     print!("\x08");
