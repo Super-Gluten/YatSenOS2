@@ -6,8 +6,7 @@ edition.workspace = true
 
 [dependencies]
 boot = { workspace = true }
-lazy_static = { workspace = true }
-uefi = { workspace = true, default-features = false }
+uefi = { workspace = true, default-features = false, features = []  }
 paste = { workspace = true }
 spin = { workspace = true }
 x86 = { workspace = true }

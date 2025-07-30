@@ -54,7 +54,6 @@ pub fn pop_key() -> Key {
 pub fn get_line() -> String {
     let mut line = String::with_capacity(BUFFER_SIZE);
     loop {
-        // debug_buffer();
         let key = pop_key();
 
         match key {

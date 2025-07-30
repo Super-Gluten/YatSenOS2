@@ -1,5 +1,4 @@
 use super::consts::*;
-// 这里引入原子类型不能时用std::sync::atomic 因为 no_std环境!
 use core::sync::atomic::{AtomicU64, Ordering};
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
