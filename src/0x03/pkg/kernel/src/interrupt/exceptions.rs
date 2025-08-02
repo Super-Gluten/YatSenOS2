@@ -1,6 +1,5 @@
 use crate::memory::*;
 use crate::proc::manager;
-use core::arch::asm;
 use x86_64::VirtAddr;
 use x86_64::registers::control::Cr2;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
@@ -25,9 +24,11 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
         .set_handler_fn(stack_segment_fault_handler);
     idt.general_protection_fault
         .set_handler_fn(general_protection_fault_handler);
-    idt.page_fault
-        .set_handler_fn(page_fault_handler)
-        .set_stack_index(gdt::PAGE_FAULT_IST_INDEX);
+    unsafe{
+        idt.page_fault
+            .set_handler_fn(page_fault_handler)
+            .set_stack_index(gdt::PAGE_FAULT_IST_INDEX);
+    }
     idt.x87_floating_point
         .set_handler_fn(x87_floating_point_handler);
     idt.alignment_check
@@ -54,9 +55,11 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     //     .set_handler_fn(overflow_handler);
 
     // Abort
-    idt.double_fault
-        .set_handler_fn(double_fault_handler)
-        .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
+    unsafe {
+        idt.double_fault
+            .set_handler_fn(double_fault_handler)
+            .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
+    }
     idt.machine_check
         .set_handler_fn(machine_check_handler);
     

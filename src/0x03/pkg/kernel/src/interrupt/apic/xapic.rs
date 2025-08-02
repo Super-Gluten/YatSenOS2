@@ -1,6 +1,5 @@
 use super::LocalApic;
 use crate::interrupt::consts::*;
-use crate::memory::address::physical_to_virtual;
 use bit_field::BitField;
 use bitflags::bitflags;
 use core::fmt::{Debug, Error, Formatter};
