@@ -30,7 +30,7 @@ bitflags = "2.6"
 libm = "0.2.15"
 xmas-elf = "0.10"
 arrayvec = { version = "0.7", default-features = false }
-uefi = { version = "0.34", default-features = false }
+uefi = { version = "0.34", default-features = false, features = [] }
 lazy_static = { version = "1.4", features = ["spin_no_std"] }
 
 # Local dependencies
