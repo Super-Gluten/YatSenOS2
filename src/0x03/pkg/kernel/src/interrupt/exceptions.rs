@@ -8,31 +8,27 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     // see: https://wiki.osdev.org/Exceptions
     //
     // Fault:
-    idt.divide_error
-        .set_handler_fn(divide_error_handler);
+    idt.divide_error.set_handler_fn(divide_error_handler);
     idt.bound_range_exceeded
         .set_handler_fn(bound_range_exceeded_handler);
-    idt.invalid_opcode
-        .set_handler_fn(invalid_opcode_handler);
+    idt.invalid_opcode.set_handler_fn(invalid_opcode_handler);
     idt.device_not_available
         .set_handler_fn(device_not_available_handler);
-    idt.invalid_tss
-        .set_handler_fn(invalid_tss_handeler);
+    idt.invalid_tss.set_handler_fn(invalid_tss_handeler);
     idt.segment_not_present
         .set_handler_fn(segment_not_present_handler);
     idt.stack_segment_fault
         .set_handler_fn(stack_segment_fault_handler);
     idt.general_protection_fault
         .set_handler_fn(general_protection_fault_handler);
-    unsafe{
+    unsafe {
         idt.page_fault
             .set_handler_fn(page_fault_handler)
             .set_stack_index(gdt::PAGE_FAULT_IST_INDEX);
     }
     idt.x87_floating_point
         .set_handler_fn(x87_floating_point_handler);
-    idt.alignment_check
-        .set_handler_fn(alignment_check_handler);
+    idt.alignment_check.set_handler_fn(alignment_check_handler);
     idt.simd_floating_point
         .set_handler_fn(simd_floating_point_handler);
     // idt.virtualization
@@ -45,7 +41,7 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     //     .set_handler_fn(vmm_communication_handler);
     // idt.security
     //     .set_handler_fn(security_handler);
-    
+
     // Trap
     // idt.debug
     //     .set_handler_fn(debug_handler);
@@ -60,9 +56,8 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
             .set_handler_fn(double_fault_handler)
             .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
     }
-    idt.machine_check
-        .set_handler_fn(machine_check_handler);
-    
+    idt.machine_check.set_handler_fn(machine_check_handler);
+
     // Other
     // idt.non_maskable_interrupt
     //     .set_handler_fn(non_maskable_interrupt_handler);
@@ -70,9 +65,8 @@ pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
     // Legacy
     // idt.coprocessor_segment_overrun
     //     .set_handler_fn(coprocessor_segment_overrun_handler);
-    
 }
-    
+
 /// fault handler
 pub extern "x86-interrupt" fn divide_error_handler(stack_frame: InterruptStackFrame) {
     panic!("EXCEPTION: DIVIDE ERROR\n\n{:#?}", stack_frame);
@@ -142,7 +136,10 @@ pub extern "x86-interrupt" fn page_fault_handler(
             stack_frame
         );
         // print info about which process causes page fault
-        info!("the Page Fault occurs on the process {:?}", manager::get_process_manager().current().pid());
+        info!(
+            "the Page Fault occurs on the process {:?}",
+            manager::get_process_manager().current().pid()
+        );
     }
 }
 
@@ -164,7 +161,6 @@ pub extern "x86-interrupt" fn simd_floating_point_handler(stack_frame: Interrupt
     panic!("EXCEPTION: SIMD FLOATING POINT\n\n{:#?}", stack_frame);
 }
 
-
 // abort
 pub extern "x86-interrupt" fn double_fault_handler(
     stack_frame: InterruptStackFrame,
@@ -173,9 +169,9 @@ pub extern "x86-interrupt" fn double_fault_handler(
     panic!(
         "EXCEPTION: DOUBLE FAULT, ERROR_CODE: 0x{:016x}\n\n{:#?}",
         error_code, stack_frame
-    );
+    )
 }
 
 pub extern "x86-interrupt" fn machine_check_handler(stack_frame: InterruptStackFrame) -> ! {
-    panic!("EXCEPTION: MACHINE CHECK\n\n{:#?}", stack_frame);
+    panic!("EXCEPTION: MACHINE CHECK\n\n{:#?}", stack_frame)
 }

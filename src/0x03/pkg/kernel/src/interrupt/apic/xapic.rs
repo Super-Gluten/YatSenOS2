@@ -145,7 +145,7 @@ impl LocalApic for XApic {
             // Send an Init Level De-Assert to synchronise arbitration ID's.
             // Send an Init Level De-Assert to synchronise arbitration ID's.
             self.write(Self::ICR_HIGH, 0); // set ICR_HIGH as 0
-            let mut icr_low: u32 = InterruptCommandFlags::DM.bits() |
+            let icr_low: u32 = InterruptCommandFlags::DM.bits() |
                 // InterruptCommandFlags::LEVEL0.bits() |
                 InterruptCommandFlags::TM.bits() |
                 InterruptCommandFlags::DSH.bits();

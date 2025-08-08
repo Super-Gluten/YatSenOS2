@@ -4,10 +4,7 @@ use pc_keyboard::DecodedKey;
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
 
 use super::consts::*;
-use crate::drivers::{
-    input::push_key,
-    serial::get_serial_for_sure,
-};
+use crate::drivers::{input::push_key, serial::get_serial_for_sure};
 
 /// Maxmium bytes of UTF-8 characters
 const SERIAL_BUFFER_SIZE: usize = 4;

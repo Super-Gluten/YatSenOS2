@@ -1,6 +1,6 @@
 use volatile::{VolatileRef, access::ReadOnly};
 use x86_64::structures::gdt::SegmentSelector;
-use x86_64::{VirtAddr, registers::rflags::RFlags, structures::idt::InterruptStackFrameValue}; // 在Default内的SegmentSelector需要使用
+use x86_64::{VirtAddr, registers::rflags::RFlags, structures::idt::InterruptStackFrameValue};
 
 use crate::{RegistersValue, memory::gdt::get_selector};
 
@@ -18,18 +18,16 @@ pub struct ProcessContext {
 }
 
 impl ProcessContext {
+    // Use VolatileRef wrapper to ensure direct memory operation safely
     #[inline]
     pub fn as_mut(&mut self) -> VolatileRef<ProcessContextValue> {
         VolatileRef::from_mut_ref(&mut self.value)
-    } // 返回一个对 ProcessContextValue的易变引用包装器，修改易变数据时使用
-    // VolatileRef：特殊的引用包装器，用于处理 易变内存访问，防止编译器进行不安全的优化
+    }
 
     #[inline]
     pub fn as_ref(&self) -> VolatileRef<'_, ProcessContextValue, ReadOnly> {
         VolatileRef::from_ref(&self.value)
-    } // 返回一个只读的VolatileRef包装器，安全读取易变数据，只读时使用
-    // as_mut 和 as_ref 用于获取可变/只读的 VolatileRef包装器
-    // 对应使用 .as_mut_ptr() 和 .as_ptr() 获取底层指针，执行不可优化的内存访问操作
+    }
 
     #[inline]
     pub fn set_rax(&mut self, value: usize) {
@@ -39,12 +37,12 @@ impl ProcessContext {
     #[inline]
     pub fn save(&mut self, context: &ProcessContext) {
         self.value = context.as_ref().as_ptr().read();
-    } // 将context保存到当前对象
+    }
 
     #[inline]
     pub fn restore(&self, context: &mut ProcessContext) {
         context.as_mut().as_mut_ptr().write(self.value);
-    } // 将当前对象的上下文写入context
+    }
 
     pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.value.stack_frame.stack_pointer = stack_top;

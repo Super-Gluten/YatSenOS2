@@ -17,10 +17,10 @@ type FrameAllocatorRef<'a> = &'a mut BootInfoFrameAllocator;
 
 pub struct ProcessVm {
     // page table is shared by parent and child
-    pub(super) page_table: PageTableContext, // 使用paging.rs中的结构体
+    pub(super) page_table: PageTableContext, // use struct define on paging.rs
 
     // stack is pre-process allocated
-    pub(super) stack: Stack, // 使用stack.rs中的结构体
+    pub(super) stack: Stack, // use struct define on stack.rs
 }
 
 impl ProcessVm {
@@ -32,36 +32,39 @@ impl ProcessVm {
     }
 
     pub fn init_kernel_vm(mut self) -> Self {
-        // TODO: record kernel code usage
+        // use fn: kstack() and record kernel code usage
         self.stack = Stack::kstack();
-        info!("{}", self.stack.memory_usage()); // 打印内核栈的内存大小
+        info!("{}", self.stack.memory_usage());
         self
     }
 
+    // Initializes the process stack for the given ProcessId
     pub fn init_proc_stack(&mut self, pid: ProcessId) -> VirtAddr {
-        // FIXME: calculate the stack for pid
-        info!("{:?}", STACK_INIT_TOP);
-        let stack_top_addr = STACK_INIT_TOP - STACK_MAX_SIZE * (pid.0 as u64 - 1); // 计算对应用户栈栈顶地址
+        // calculate the stack for pid
+        //
+        // 1. Calculate the physical address of stack
+        let stack_top_addr = STACK_INIT_TOP - STACK_MAX_SIZE * (pid.0 as u64 - 1);
         let stack_bot_addr = STACK_INIT_BOT - STACK_MAX_SIZE * (pid.0 as u64 - 1);
         info!("top {:?} bot {:?}", stack_top_addr, stack_bot_addr);
-        // 默认用户栈分配大小为 STACK_DEF_SIZE
-        // 计算对应的栈底物理地址
 
-        let virtual_stack_top_addr = VirtAddr::new(stack_top_addr); // 构建该进程用户栈栈顶的虚拟地址
+        // 2. Virtualize the stack_top and create the stack
+        let virtual_stack_top_addr = VirtAddr::new(stack_top_addr);
 
         self.stack = Stack::new(
             Page::containing_address(virtual_stack_top_addr),
             STACK_DEF_PAGE,
         );
-        // 调用stack.rs中的方法new，传递包含虚拟栈顶的页，并规定页数为默认用户栈页数
 
-        let page_table = &mut self.page_table.mapper(); // 获取能够传递给elf::map_range 函数的page_table参数
-        let frame_alloc = &mut *get_frame_alloc_for_sure(); // 获取能够传递给elf::map_range 函数的frame_alloc参数
+        // 3. Use map_range to perform memory mapping on the stack
+        //
+        // # Attention:
+        // The stack grow downwards in the kernel, so the map_range use stack_bot_addr
+        // because it's smaller than stack_top_addr
+        let page_table = &mut self.page_table.mapper();
+        let frame_alloc = &mut *get_frame_alloc_for_sure();
         elf::map_range(stack_bot_addr, STACK_DEF_PAGE, page_table, frame_alloc).unwrap();
-        // 这里一定要注意！因为map_range中，传入的addr是较小的那个，所以因为用户栈是向下增长，
-        // 即栈顶地址大于栈底，所以这里应该传入stack_bot_addr
-        // 第二项参数为用户栈默认页数，实际为1
 
+        // 4. Return the VirtAddr at the top of stack
         virtual_stack_top_addr
     }
 

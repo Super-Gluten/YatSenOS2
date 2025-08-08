@@ -1,3 +1,25 @@
+//! 中断处理模块
+//!
+//! 该模块提供了操作系统核心的中断处理功能，包括：
+//! - 中断描述符表 (IDT) 的初始化与管理
+//! - 局部 APIC (LAPIC) 和 I/O APIC 的配置
+//! - 时钟、异常和串口等中断的注册与处理
+//!
+//! ## 主要组件
+//! - [`IDT`]: 全局中断描述符表（通过 `lazy_static!` 初始化）
+//! - [`XApic`]/[`IoApic`]: APIC 驱动实现（xAPIC 模式）
+//! - 子模块:
+//!   - `apic`: Advanced Programmable Interrupt Controller驱动实现
+//!   - `clock`: 时钟中断
+//!   - `consts`: 相关常量定义
+//!   - `exceptions`: CPU 异常处理
+//!   - `serial`: 串口中断
+//!
+//! ## 关键接口
+//! - 初始化: [`init`]
+//! - 中断控制: [`enable_irq`], [`ack`]
+//!
+
 mod apic;
 pub mod clock;
 mod consts;

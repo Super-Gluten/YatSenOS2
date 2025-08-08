@@ -1,16 +1,43 @@
+//! 进程管理模块
+//!
+//! 该模块提供了操作系统核心的进程管理功能，包括：
+//! - 进程创建、调度和销毁
+//! - 进程上下文切换
+//! - 虚拟内存管理（用户栈、内核栈、页表映射）
+//! - 内核线程管理
+//!
+//! # 主要组件
+//! - **进程管理**：
+//!   - [`manager`] 定义 ProcessManager，维护就绪队列与进程键值对
+//!   - [`processor`] 定义 Processor，当前CPU的运行进程记录器
+//! - **进程结构与数据**：
+//!   - [`process`] 定义 Process，提供与进程生命周期相关的方法
+//!   - [`pid`] 定义 ProcessId，记录进程的特定id
+//!   - [`context`] 定义 ProcessContext，记录寄存器堆信息和中断栈值
+//!   - [`data`] 定义 ProcessData，记录环境信息
+//!   - [`paging`] 定义 PageTableContext，记录页表信息
+//! - **虚拟内存管理**：
+//!   - [`vm`] 提供进程虚拟内存管理，包括用户栈、内核栈和内存映射
+//!
+//! # 主要方法
+//! - 管理器初始化： [`init`]
+//! - 进程切换： [`switch`], [`spawn_kernel_thread`], [`process_exit`]
+//! - 状态查看： [`print_process_list`], [`env`]
+//! - 错误处理： [`handle_page_fault`]
+//!
+
 mod context;
 mod data;
-pub mod manager; // 因为在util/mod.rs中引用了proc::*，且需要manager
+pub mod manager;
 mod paging;
 mod pid;
 mod process;
 mod processor;
 mod vm;
 
-use crate::memory::PAGE_SIZE;
 use manager::*;
 use process::*;
-use processor::*; // 在switch函数中使用了proceeor相关的函数
+use processor::*;
 use vm::*;
 
 use alloc::string::String;
@@ -21,7 +48,8 @@ pub use pid::ProcessId;
 
 use x86_64::VirtAddr;
 use x86_64::structures::idt::PageFaultErrorCode;
-pub const KERNEL_PID: ProcessId = ProcessId(1); // 常量定义：内核进程pid为1
+/// Constant defination: kernel's pid is always 1
+pub const KERNEL_PID: ProcessId = ProcessId(1);
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum ProgramStatus {
@@ -39,11 +67,10 @@ pub fn init() {
 
     // kernel process
     let kproc = {
-        /* FIXME: create kernel process */
         Process::new(
             "kernel".into(),
             None,
-            Some(proc_vm), // 使用已经建好的proc_vm就好
+            Some(proc_vm),
             Some(ProcessData::new()),
         )
     };
@@ -54,7 +81,7 @@ pub fn init() {
 
 pub fn switch(context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        // FIXME: switch to the next process
+        //       switch to the next process
         //      - save current process's context
         let manager = get_process_manager();
         manager.save_current(context);
@@ -64,7 +91,6 @@ pub fn switch(context: &mut ProcessContext) {
 
         //      - restore next process's context
         manager.switch_next(context);
-        // 三个相关的函数功能见manager.rs对应函数
     });
 }
 
@@ -83,10 +109,8 @@ pub fn print_process_list() {
 
 pub fn env(key: &str) -> Option<String> {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        // FIXME: get current process's environment variable
+        // get current process's environment variable
         get_process_manager().current().read().env(key)
-        // Process的.read()返回 ProcessInner.read()，然后通过deref方法解引用为ProcessData
-        // 最后使用ProcessData中定义的方法env
     })
 }
 

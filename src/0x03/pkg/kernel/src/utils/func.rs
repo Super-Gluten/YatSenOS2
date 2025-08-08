@@ -1,6 +1,6 @@
-use lazy_static::lazy_static;
-use alloc::string::String;
 use alloc::format;
+use alloc::string::String;
+use lazy_static::lazy_static;
 use spin::Mutex;
 
 lazy_static! {
@@ -18,7 +18,7 @@ pub fn test() -> ! {
         id = "unknown".into()
     }
     loop {
-        // TODO: better way to show more than one process is running?
+        // display processes switching by printing ID
         count += 1;
         if count == 10000 {
             count = 0;
@@ -33,9 +33,8 @@ pub fn test() -> ! {
             string.push_str(&add_str);
             print!("{}", add_str);
         }
-        unsafe {
-            x86_64::instructions::hlt();
-        }
+
+        x86_64::instructions::hlt();
     }
 }
 

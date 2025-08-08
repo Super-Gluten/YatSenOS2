@@ -1,5 +1,4 @@
 use alloc::string::String;
-use alloc::vec::Vec;
 use crossbeam_queue::ArrayQueue;
 use lazy_static::lazy_static;
 use log::warn;
@@ -17,7 +16,7 @@ pub type Key = DecodedKey;
 /// Size of the input buffer (in number of key events)
 const BUFFER_SIZE: usize = 128;
 
-/// Lazy initialization of the global input buffer
+// Lazy initialization of the global input buffer
 lazy_static! {
     static ref INPUT_BUF: ArrayQueue<Key> = {
         let queue = ArrayQueue::new(BUFFER_SIZE);
