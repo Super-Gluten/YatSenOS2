@@ -81,7 +81,6 @@ pub fn dispatcher(context: &mut ProcessContext) {
             exit_process(&args, context)
         }
         // pid: arg0 as u16 -> status: isize
-        // ? mislead explaination
         Syscall::WaitPid => {
             /* FIXME: check if the process is running or get retcode */
             sys_wait_pid(&args, context)

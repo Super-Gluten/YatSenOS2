@@ -47,7 +47,7 @@ pub fn sys_read(args: &SyscallArgs) -> usize {
 // ret: arg0 as isize
 pub fn exit_process(args: &SyscallArgs, context: &mut ProcessContext) {
     // FIXME: exit process with retcode
-    proc::process_exit(args.arg0 as isize, context);
+    proc::exit(args.arg0 as isize, context);
 }
 
 pub fn list_process() {

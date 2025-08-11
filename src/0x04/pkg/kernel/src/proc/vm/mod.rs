@@ -3,6 +3,7 @@ use x86_64::{
     VirtAddr,
     structures::paging::{page::*, *},
 };
+use xmas_elf::ElfFile;
 
 use crate::{humanized_size, memory::*};
 
@@ -45,7 +46,7 @@ impl ProcessVm {
         // 1. Calculate the physical address of stack
         let stack_top_addr = STACK_INIT_TOP - STACK_MAX_SIZE * (pid.0 as u64 - 1);
         let stack_bot_addr = STACK_INIT_BOT - STACK_MAX_SIZE * (pid.0 as u64 - 1);
-        info!("top {:?} bot {:?}", stack_top_addr, stack_bot_addr);
+        info!("top {:#x} bot {:#x}", stack_top_addr, stack_bot_addr);
 
         // 2. Virtualize the stack_top and create the stack
         let virtual_stack_top_addr = VirtAddr::new(stack_top_addr);
@@ -55,14 +56,19 @@ impl ProcessVm {
             STACK_DEF_PAGE,
         );
 
-        // 3. Use map_range to perform memory mapping on the stack
+        // 3. Use user_map_range to perform memory mapping on the stack
         //
         // # Attention:
-        // The stack grow downwards in the kernel, so the map_range use stack_bot_addr
+        // The stack grow downwards in the kernel, so the user_map_range use stack_bot_addr
         // because it's smaller than stack_top_addr
         let page_table = &mut self.page_table.mapper();
         let frame_alloc = &mut *get_frame_alloc_for_sure();
-        elf::map_range(stack_bot_addr, STACK_DEF_PAGE, page_table, frame_alloc).unwrap();
+        elf::user_map_range(
+            stack_bot_addr, 
+            STACK_DEF_PAGE, 
+            page_table, 
+            frame_alloc,
+        ).unwrap();
 
         // 4. Return the VirtAddr at the top of stack
         virtual_stack_top_addr
@@ -77,6 +83,23 @@ impl ProcessVm {
 
     pub(super) fn memory_usage(&self) -> u64 {
         self.stack.memory_usage()
+    }
+
+    pub fn load_elf(&mut self, elf: &ElfFile) {
+        let mapper = &mut self.page_table.mapper();
+        let alloc = &mut *get_frame_alloc_for_sure();
+
+        // FIXME: load elf to process pagetable
+        elf::load_elf(
+            elf,
+            *PHYSICAL_OFFSET.get().unwrap(), // 克隆内核的地址偏移量
+            mapper,
+            alloc,
+            true, // 因为调用本函数的都是用户进程，所以user_access都是true
+        )
+        .unwrap();
+
+        self.stack.init(mapper, alloc);
     }
 }
 

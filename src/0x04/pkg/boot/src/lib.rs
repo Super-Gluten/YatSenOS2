@@ -11,11 +11,14 @@ use x86_64::VirtAddr;
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{OffsetPageTable, PageTable};
 
-use arrayvec::{ArrayString, ArrayVec}; // 0x04新增App结构体
-use xmas_elf::ElfFile; // 0x04 新使用的ElfFile
+use arrayvec::{ArrayString, ArrayVec};
+use xmas_elf::ElfFile;
 
+/// using uefi allocator
 pub mod allocator;
+/// the config for the bootloader
 pub mod config;
+/// the functions for the bootloader
 pub mod fs;
 
 pub use allocator::*;
@@ -28,7 +31,6 @@ pub type MemoryMap = ArrayVec<MemoryDescriptor, 256>;
 
 /// App information
 pub struct App {
-    // 删除了App类型的生命周期
     /// The name of app
     pub name: ArrayString<16>,
     /// The ELF file
@@ -50,8 +52,11 @@ pub struct BootInfo {
     /// The system table virtual address
     pub system_table: NonNull<core::ffi::c_void>,
 
+    /// The log level
+    pub log_level: &'static str,
+
     /// Loaded apps
-    pub loaded_apps: Option<AppList>, // 0x04 add
+    pub loaded_apps: Option<AppList>,
 }
 
 /// Get current page table from CR3

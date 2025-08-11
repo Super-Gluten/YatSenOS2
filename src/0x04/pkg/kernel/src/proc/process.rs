@@ -1,8 +1,14 @@
 use super::*;
+use crate::memory::*;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::*;
 use vm::*;
+use x86_64::structures::paging::mapper::MapToError;
+use x86_64::structures::paging::page::PageRange;
+use x86_64::structures::paging::*;
+
+use xmas_elf::ElfFile;
 
 #[derive(Clone)]
 pub struct Process {
@@ -180,6 +186,14 @@ impl ProcessInner {
         // 3. take and drop unused resources
         self.proc_data.take();
         self.proc_vm.take();
+    }
+
+    pub fn load_elf(&mut self, elf: &ElfFile) {
+        self.vm_mut().load_elf(elf); // 调用ProcessVm中的load_elf()方法
+    }
+
+    pub fn is_dead(&self) -> bool {
+        self.status == ProgramStatus::Dead
     }
 }
 
