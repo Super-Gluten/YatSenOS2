@@ -153,7 +153,7 @@ pub fn list_app() {
         for (index, app) in app_list.unwrap().iter().enumerate() {
             let elf = &app.elf;
             println!(
-                "{:<2} | {:<10} | {:<8} |  {:#x}",
+                "{:<2} | {:<10} | {:<8} | {:#x}",
                 format!("{} ", index + 1),
                 app.name,
                 format!("{} kb", elf.input.len() / 1024), // 通过elf文件的读取长度计算实际大小

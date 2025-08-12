@@ -9,7 +9,7 @@ use super::SyscallArgs;
 
 // path: &str (ptr: arg0 as *const u8, len: arg1) -> pid: u16
 pub fn spawn_process(args: &SyscallArgs) -> usize {
-    // FIXME: get app name by args
+    //    1. get app name by args
     //       - core::str::from_utf8_unchecked
     //       - core::slice::from_raw_parts
     let name = unsafe {
@@ -18,43 +18,47 @@ pub fn spawn_process(args: &SyscallArgs) -> usize {
             args.arg1,
         ))
     };
-    // FIXME: spawn the process by name
-    // FIXME: handle spawn error, return 0 if failed
-    // FIXME: return pid as usize
+    //     2. spawn the process by name
+    //       - handle spawn error, return 0 if failed
+    //       - return pid as usize
     match proc::spawn(name) {
         Some(pid) => return pid.0 as usize,
         _ => return 0,
     }
 }
 
+// fd: arg0 as u8, buf: &[u8] (ptr: arg1 as *const u8, len: arg2)
 pub fn sys_write(args: &SyscallArgs) -> usize {
-    // FIXME: get buffer and fd by args
-    //       - core::slice::from_raw_parts
+    //      get buffer and fd by args
+    //      - use core::slice::from_raw_parts
     let fd = args.arg0 as u8;
     let buf = unsafe { core::slice::from_raw_parts(args.arg1 as *const u8, args.arg2) };
-    // FIXME: call proc::write -> isize
-    // FIXME: return the result as usize
+    //      call proc::write -> isize
+    //      - return the result as usize
     proc::write(fd, buf) as usize
 }
 
+// fd: arg0 as u8, buf: &[u8] (ptr: arg1 as *const u8, len: arg2)
 pub fn sys_read(args: &SyscallArgs) -> usize {
-    // FIXME: just like sys_write
+    //      get buffer and fd by args
+    //      - use core::slice::from_raw_parts
     let fd = args.arg0 as u8;
     let buf = unsafe { core::slice::from_raw_parts_mut(args.arg1 as *mut u8, args.arg2) };
+    //      call proc::read -> isize
+    //      - return the result as usize
     proc::read(fd, buf) as usize
 }
 
 // ret: arg0 as isize
 pub fn exit_process(args: &SyscallArgs, context: &mut ProcessContext) {
-    // FIXME: exit process with retcode
     proc::exit(args.arg0 as isize, context);
 }
 
 pub fn list_process() {
-    // FIXME: list all processes
     proc::print_process_list();
 }
 
+// layout: arg0 as *const Layout -> ptr: *mut u8
 pub fn sys_allocate(args: &SyscallArgs) -> usize {
     let layout = unsafe { (args.arg0 as *const Layout).as_ref().unwrap() };
 
@@ -72,6 +76,7 @@ pub fn sys_allocate(args: &SyscallArgs) -> usize {
     }
 }
 
+// ptr: arg0 as *mut u8
 pub fn sys_deallocate(args: &SyscallArgs) {
     let layout = unsafe { (args.arg1 as *const Layout).as_ref().unwrap() };
 

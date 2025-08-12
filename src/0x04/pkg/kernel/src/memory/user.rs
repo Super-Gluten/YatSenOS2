@@ -17,13 +17,14 @@ pub fn init() {
     info!("User Heap Initialized.");
 }
 
+// follow the steps the `init()` in allocator.rs
 pub fn init_user_heap() -> Result<(), MapToError<Size4KiB>> {
-    // Get current pagetable mapper
+    // 1. Get current pagetable mapper
     let mapper = &mut PageTableContext::new().mapper();
-    // Get global frame allocator
+    // 2. Get global frame allocator
     let frame_allocator = &mut *super::get_frame_alloc_for_sure();
 
-    // FIXME: use elf::map_range to allocate & map
+    //    3. use elf::user_map_range to allocate & map
     //        frames (R/W/User Access)
 
     let user_heap_start = VirtAddr::new(USER_HEAP_START as u64);
@@ -55,6 +56,3 @@ pub fn init_user_heap() -> Result<(), MapToError<Size4KiB>> {
 
     Ok(())
 }
-// 根据 elf/lib.rs map_range()
-// 新定义了一个user_map_range() in elf/lib.rs；
-// 整体init_user_heap() 结构仿照memory/allocator.rs中的init()

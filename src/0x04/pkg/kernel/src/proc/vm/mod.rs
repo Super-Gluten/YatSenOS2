@@ -89,15 +89,14 @@ impl ProcessVm {
         let mapper = &mut self.page_table.mapper();
         let alloc = &mut *get_frame_alloc_for_sure();
 
-        // FIXME: load elf to process pagetable
+        // load elf to process pagetable
         elf::load_elf(
             elf,
-            *PHYSICAL_OFFSET.get().unwrap(), // 克隆内核的地址偏移量
+            *PHYSICAL_OFFSET.get().unwrap(),
             mapper,
             alloc,
-            true, // 因为调用本函数的都是用户进程，所以user_access都是true
-        )
-        .unwrap();
+            true,
+        ).unwrap();
 
         self.stack.init(mapper, alloc);
     }
