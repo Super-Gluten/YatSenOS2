@@ -24,7 +24,7 @@ mod apic;
 pub mod clock;
 mod consts;
 mod exceptions;
-mod serial;
+pub mod serial;
 mod syscall;
 
 use crate::memory::physical_to_virtual;

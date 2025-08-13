@@ -1,10 +1,13 @@
 use crate::*;
 use alloc::string::{String, ToString};
 use alloc::vec;
+use alloc::str::from_utf8;
 
 pub struct Stdin;
 pub struct Stdout;
 pub struct Stderr;
+
+const UTF8_MAX_SIZE: usize = 4;
 
 impl Stdin {
     fn new() -> Self {
@@ -12,41 +15,56 @@ impl Stdin {
     }
 
     pub fn read_line(&self) -> String {
-        // FIXME: allocate string
+        // 1. allocate string
         let mut line = String::new();
-        // FIXME: read from input buffer
-        //       - maybe char by char?
-        // FIXME: handle backspace / enter...
-        // FIXME: return string
 
         loop {
-            let buf: &mut [u8] = &mut [0u8; 256];
+            // 2. read from input buffer
+            //       - char by char?
+            let buf: &mut [u8] = &mut [0u8; UTF8_MAX_SIZE];
             let ret = sys_read(0, buf);
 
             if ret.is_none() {
-                continue;
+                break;
             } else {
-                for i in 0..ret.unwrap() {
-                    let ch = buf[i];
-                    match ch {
-                        b'\r' => {
-                            sys_write(1, "\n".as_bytes()); // 写入一个换行符
-                            return line;
+                let count: usize = ret.unwrap();
+                // 3. match and handle different keys with utf8 characters
+                match from_utf8(&buf[..count]) {
+                    Ok(s) => {
+                        if !s.is_empty() {
+                            let ch: char = s.chars().next().unwrap();
+                            match ch {
+                                // Handle backspace/delete (remove last characters and update terminal display)
+                                '\x08' | '\x7F' => {
+                                    if !line.is_empty() {
+                                        line.pop();
+                                    }
+                                    sys_write(1, "\x08\x20\x08".as_bytes());
+                                }
+                                
+                                // Handle newline (end of input)
+                                '\n' | '\r' => {
+                                    sys_write(1, "\n".as_bytes());
+                                    return line;
+                                }
+
+                                // Handle printable characters
+                                _ => {
+                                    line.push(ch);
+                                    sys_write(1, &buf[..count]);
+                                }
+                            }
+                        } else {
+                            continue;
                         }
-                        b'\x08' | b'\x7f' => {
-                            line.pop();
-                            sys_write(1, "\x08\x20\x08".as_bytes()); // 写入一个退格
-                        }
-                        _ => {
-                            line.push(ch as char);
-                            sys_write(1, &mut [ch]); // 写入一个字符ch
-                        }
-                    };
+                    }
+                    Err(_) => continue,
                 }
             }
         }
 
-        String::new()
+        // 4. return string
+        line
     }
 }
 
