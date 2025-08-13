@@ -43,6 +43,7 @@ use processor::*;
 use vm::*;
 
 use alloc::string::String;
+use core::fmt;
 pub use context::ProcessContext;
 pub use data::ProcessData;
 pub use paging::PageTableContext;
@@ -226,4 +227,16 @@ pub fn wait_pid(pid: ProcessId, context: &mut ProcessContext) {
             manager.switch_next(context);
         }
     });
+}
+
+impl fmt::Display for ProgramStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status_str: &'static str = match self {
+            ProgramStatus::Running => "Running",
+            ProgramStatus::Ready   => "Ready  ",
+            ProgramStatus::Blocked => "Blocked",
+            ProgramStatus::Dead    => "Dead   ",
+        };
+        write!(f, "{}", status_str)
+    }
 }

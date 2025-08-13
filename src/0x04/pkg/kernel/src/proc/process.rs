@@ -9,6 +9,8 @@ use x86_64::structures::paging::page::PageRange;
 use x86_64::structures::paging::*;
 
 use xmas_elf::ElfFile;
+use crate::humanized_size;
+use stack::STACK_MAX_SIZE;
 
 #[derive(Clone)]
 pub struct Process {
@@ -243,14 +245,20 @@ impl core::fmt::Debug for Process {
 impl core::fmt::Display for Process {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let inner = self.inner.read();
+        let memory_size = inner.vm().memory_usage();
+        let (size, unit) = humanized_size(memory_size);
+        let stack_usage_percent = (memory_size as f64) / ( STACK_MAX_SIZE as f64) * 100.0;
+        
         write!(
             f,
-            " #{:-3} | #{:-3} | {:12} | {:7} | {:?}",
+            " #{:-3} | #{:-3} | {:12} | {:<7} | {:<7} | {:<12} | {:.2}%",
             self.pid.0,
             inner.parent().map(|p| p.pid.0).unwrap_or(0),
             inner.name,
             inner.ticks_passed,
-            inner.status
+            format!("{}", inner.status),
+            format!("{}{}", size, unit),
+            stack_usage_percent,
         )?;
         Ok(())
     }
