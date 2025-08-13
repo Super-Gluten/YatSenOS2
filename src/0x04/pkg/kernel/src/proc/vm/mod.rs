@@ -35,7 +35,7 @@ impl ProcessVm {
     pub fn init_kernel_vm(mut self) -> Self {
         // use fn: kstack() and record kernel code usage
         self.stack = Stack::kstack();
-        info!("{}", self.stack.memory_usage());
+        // info!("{}", self.stack.memory_usage());
         self
     }
 
