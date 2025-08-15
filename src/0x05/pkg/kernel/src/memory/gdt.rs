@@ -5,14 +5,17 @@ use x86_64::registers::segmentation::Segment;
 use x86_64::structures::gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector};
 use x86_64::structures::tss::TaskStateSegment;
 
+/// Defines index for different interrupt stack
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 pub const CLOCK_IST_INDEX: u16 = 2;
-pub const SYSCALL_IST_INDEX: u16 = 3; // 0x04 add: 为系统调用设置独立的中断栈
+pub const SYSCALL_IST_INDEX: u16 = 3;
 
+/// Specifies the size of each interrupt stack (initial 4KiB)
 pub const IST_SIZES: [usize; 5] = [0x1000, 0x1000, 0x1000, 0x1000, 0x1000];
 
 lazy_static! {
+    /// Initializes the Task State Segment (TSS) with interrupt stacks.
     static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
 
@@ -20,6 +23,7 @@ lazy_static! {
         // will be allocated on the bss section when the kernel is load
         //
         // DO NOT MODIFY THE FOLLOWING CODE
+        // Set up the privilege level 0 stack
         tss.privilege_stack_table[0] = {
             const STACK_SIZE: usize = IST_SIZES[0];
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
@@ -33,28 +37,24 @@ lazy_static! {
             stack_end
         };
 
-        // FIXME: fill tss.interrupt_stack_table with the static stack buffers like above
+        // fill tss.interrupt_stack_table with the static stack buffers like above
+        //
         // You can use `tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize]`
-
-        // 其中DOUBLE_FAULT_IST_INDEX 为双重错误的专用栈索引
+        // Configures the double fault interrupt stack
         tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
             const STACK_SIZE: usize = IST_SIZES[1];
-            // 定义一个静态可变字节数组作为实际的栈空间
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
-            // addr_of_mut! 获取STACK的原始指针
-            // 而VirtAddr::from_ptr 将原始指针转换为虚拟地址类型
             let stack_start = VirtAddr::from_ptr(addr_of_mut!(STACK));
-            // 由于栈在x86架构中是向下生长的，所以末地址等于基地址加偏移量
             let stack_end = stack_start + STACK_SIZE as u64;
             info!(
                 "Double Fault Stack  : 0x{:016x}-0x{:016x}",
                 stack_start.as_u64(),
                 stack_end.as_u64()
-            ); // 打印栈的地址范围，用0填充的16位进制数表示
-            // 返回栈顶地址给TSS的IST条目
+            );
             stack_end
         };
 
+        // Configures the page fault interrupt stack
         tss.interrupt_stack_table[PAGE_FAULT_IST_INDEX as usize] = {
             const STACK_SIZE: usize = IST_SIZES[2];
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
@@ -68,6 +68,7 @@ lazy_static! {
             stack_end
         };
 
+        // Configures the clock interrupt stack
         tss.interrupt_stack_table[CLOCK_IST_INDEX as usize] = {
             const STACK_SIZE: usize = IST_SIZES[3];
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
@@ -92,7 +93,7 @@ lazy_static! {
                 stack_end.as_u64()
             );
             stack_end
-        }; // 0x04 add: 为系统调用设置独立的中断栈
+        };
 
         tss
     };
@@ -105,7 +106,6 @@ lazy_static! {
         let data_selector = gdt.append(Descriptor::kernel_data_segment());
         let tss_selector = gdt.append(Descriptor::tss_segment(&TSS));
 
-        // 0x04 add
         let user_code_selector = gdt.append(Descriptor::user_code_segment());
         let user_data_selector = gdt.append(Descriptor::user_data_segment());
 
@@ -116,10 +116,10 @@ lazy_static! {
                 data_selector,
                 tss_selector,
             },
-            UserSelectors { // 0x04 add
+            UserSelectors {
                 user_code_selector,
-                user_data_selector
-            }
+                user_data_selector,
+            },
         )
     };
 }
@@ -131,7 +131,6 @@ pub struct KernelSelectors {
     tss_selector: SegmentSelector,
 }
 
-// 0x04 add
 #[derive(Debug)]
 pub struct UserSelectors {
     pub user_code_selector: SegmentSelector,
@@ -172,7 +171,7 @@ pub fn get_selector() -> &'static KernelSelectors {
 
 pub fn get_user_selector() -> &'static UserSelectors {
     &GDT.2
-} // 0x04 add: 返回用户进程选择子
+}
 
 pub fn get_gdt() -> Option<&'static GlobalDescriptorTable> {
     Some(&GDT.0)

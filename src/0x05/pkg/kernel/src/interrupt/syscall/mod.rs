@@ -9,12 +9,10 @@ use x86_64::PrivilegeLevel;
 
 mod service;
 use super::consts;
-
-// FIXME: write syscall service handler in `service.rs`
 use service::*;
 
 pub unsafe fn register_idt(idt: &mut InterruptDescriptorTable) {
-    // FIXME: register syscall handler to IDT
+    //   register syscall handler to IDT
     //        - standalone syscall stack
     //        - ring 3
     unsafe {
@@ -54,61 +52,31 @@ pub fn dispatcher(context: &mut ProcessContext) {
 
     match args.syscall {
         // fd: arg0 as u8, buf: &[u8] (ptr: arg1 as *const u8, len: arg2)
-        Syscall::Read => {
-            /* FIXME: read from fd & return length */
-            context.set_rax(sys_read(&args))
-        }
+        Syscall::Read => context.set_rax(sys_read(&args)),
+
         // fd: arg0 as u8, buf: &[u8] (ptr: arg1 as *const u8, len: arg2)
-        Syscall::Write => {
-            /* FIXME: write to fd & return length */
-            context.set_rax(sys_write(&args))
-        }
+        Syscall::Write => context.set_rax(sys_write(&args)),
 
         // None -> pid: u16
-        Syscall::GetPid => {
-            /* FIXME: get current pid */
-            context.set_rax(sys_get_pid() as usize)
-        }
+        Syscall::GetPid => context.set_rax(sys_get_pid() as usize),
 
         // path: &str (ptr: arg0 as *const u8, len: arg1) -> pid: u16
-        Syscall::Spawn => {
-            /* FIXME: spawn process from name */
-            context.set_rax(spawn_process(&args) as usize)
-        }
+        Syscall::Spawn => context.set_rax(spawn_process(&args) as usize),
+
         // ret: arg0 as isize
-        Syscall::Exit => {
-            /* FIXME: exit process with retcode */
-            exit_process(&args, context)
-        }
+        Syscall::Exit => exit_process(&args, context),
+
         // pid: arg0 as u16 -> status: isize
-        // ? mislead explaination
-        Syscall::WaitPid => {
-            /* FIXME: check if the process is running or get retcode */
-            sys_wait_pid(&args, context)
-        }
+        Syscall::WaitPid => sys_wait_pid(&args, context),
 
         // None
-        Syscall::Stat => {
-            /* FIXME: list processes */
-            list_process()
-        }
+        Syscall::Stat => list_process(),
+
         // None
-        Syscall::ListApp => {
-            /* FIXME: list available apps */
-            list_app()
-        }
+        Syscall::ListApp => list_app(),
 
-        // 0x05: add Fork & Sem
-        // None -> pid: u16 or 0 or -1
-        Syscall::Fork => {
-            /* FIXME: Fork the new process */
-            sys_fork(context)
-        }
-
-        // op: u8, key: u32, val: usize -> ret: any
-        Syscall::Sem => sys_sem(&args, context),
-
-        Syscall::Time => context.set_rax(sys_time() as usize),
+        // None
+        Syscall::Sleep => sleep(),
 
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented

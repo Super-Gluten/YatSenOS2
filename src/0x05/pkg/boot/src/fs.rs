@@ -74,23 +74,22 @@ pub fn free_elf(elf: ElfFile) {
 ///
 /// List all file under "APP" and load them.
 pub fn load_apps() -> AppList {
-    let mut root = open_root();
     let mut buf = [0; 8];
-    let cstr_path = uefi::CStr16::from_str_with_buf("\\APP\\", &mut buf).unwrap();
-    // cstr_path 已经定义好了，可以直接使用
+    let cstr_path: &uefi::CStr16 = uefi::CStr16::from_str_with_buf("\\APP\\", &mut buf).unwrap();
 
-    // let mut handle = { /* FIXME: get handle for \APP\ dir */};
+    // 1. get the file handle of the root directory
     let mut handle = open_root()
         .open(cstr_path, FileMode::Read, FileAttribute::empty())
         .expect("Failed to open file")
-        .into_directory() // 如果确认为Directory会导致下方找不到read_entry()函数
-        .expect("Not a Directory"); // 仿照open_file()函数中调用open_root()的方式
+        .into_directory()
+        .expect("Can't be a Directory");
 
     let mut apps = ArrayVec::new();
     let mut entry_buf = [0u8; 0x100];
 
     loop {
-        let info = handle
+        // 2. get the struct containing information about a single file
+        let info: Option<&mut FileInfo> = handle
             .read_entry(&mut entry_buf)
             .expect("Failed to read entry");
         // handle是已经打开的文件夹句柄，read_entry()用于遍历该目录内容，每次阅读一条
@@ -107,24 +106,25 @@ pub fn load_apps() -> AppList {
 
         match info {
             Some(entry) => {
-                // let file = { /* FIXME: get handle for app binary file */ };
+                // 3. open file with the name under current file handle
                 let file = handle
                     .open(entry.file_name(), FileMode::Read, FileAttribute::empty())
                     .unwrap();
-                // 这里不会使用open_file()函数，因为它从根目录打开文件，而非当前的handle目录句柄
 
+                // The type of `file` should be RegularFile instead of Dictory
                 if file.is_directory().unwrap_or(true) {
                     continue;
                 }
 
                 let elf = {
-                    // FIXME: load file with `load_file` function
+                    // 4. load file with `load_file` function
+                    //    check if the type of `file` is RegularFile
                     let elf_file = load_file(file.into_regular_file().as_mut().unwrap());
-                    // 因为无法确定file的类型，所以需要先确认是否为RegularFile, 是的话转换为&mut RegularFile
-                    // FIXME: convert file to `ElfFile`
+                    // 5. convert file to `ElfFile`
                     ElfFile::new(elf_file).unwrap()
                 };
 
+                // 6. get the name of appliacation and push it into ArrayVec `apps`
                 let mut name = ArrayString::<16>::new();
                 entry.file_name().as_str_in_buf(&mut name).unwrap();
 

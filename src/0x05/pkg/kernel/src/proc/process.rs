@@ -1,16 +1,12 @@
 use super::*;
-use crate::memory::*;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::*;
 use vm::*;
-use x86_64::structures::paging::mapper::MapToError;
-use x86_64::structures::paging::page::PageRange;
-use x86_64::structures::paging::*;
 
+use crate::humanized_size;
+use stack::STACK_MAX_SIZE;
 use xmas_elf::ElfFile;
-
-use crate::proc::vm::stack::{STACK_MAX_PAGES, STACK_START_MASK}; // 用于计算inner中的栈偏移量
 
 #[derive(Clone)]
 pub struct Process {
@@ -96,32 +92,8 @@ impl Process {
         self.write().vm_mut().init_proc_stack(self.pid)
     }
 
-    // 0x05 add:
-    pub fn fork(self: &Arc<Self>) -> Arc<Self> {
-        // FIXME: lock inner as write
-        let mut inner = self.inner.write();
-        // FIXME: inner fork with parent weak ref
-        let child_inner = inner.fork(Arc::downgrade(self)); // 依然是逐级调用
-        // FOR DBG: maybe print the child process info
-        //          e.g. parent, name, pid, etc.
-        let child_pid = ProcessId::new(); // 为子进程分配一个pid
-        debug!(
-            "Parent process: {} has forked {} with name {}",
-            inner.name, child_pid, child_inner.name
-        );
-        // FIXME: make the arc of child
-        let child_process = Arc::new(Self {
-            pid: child_pid,
-            inner: Arc::new(RwLock::new(child_inner)),
-        }); // 仿照new方法的末尾的直接创建方法
-
-        // FIXME: add child to current process's children list
-        inner.children.push(child_process.clone()); // 注意这里同样要压入克隆体，不然会返回值出现借用错误
-        // FIXME: set fork ret value for parent with `context.set_rax`
-        inner.context.set_rax(child_pid.0 as usize);
-        // FIXME: mark the child as ready & return it
-        child_process.inner.write().pause(); // 注意这里不能再用child_inner了，那样写不进child_process……
-        return child_process;
+    pub fn dealloc_current_stack(&self) {
+        self.write().vm_mut().clean_up_stack()
     }
 }
 
@@ -146,6 +118,9 @@ impl ProcessInner {
         self.status = ProgramStatus::Running;
     }
 
+    /// # Returns
+    /// - none if process still alive.
+    /// - Some(ret) if process is dead
     pub fn exit_code(&self) -> Option<isize> {
         self.exit_code
     }
@@ -173,46 +148,46 @@ impl ProcessInner {
     /// Save the process's context
     /// mark the process as ready
     pub(super) fn save(&mut self, context: &ProcessContext) {
-        // FIXME: save the process's context
-        if self.is_dead() {
+        // 1. save the process's context if the process is alive
+        if self.status == ProgramStatus::Dead {
             return;
         }
-        self.context.save(context); // 使用ProcessContext中定义的方法 save保存上下文
-        self.pause(); // 调用方法pause()设置进程状态为 ready
-    } // context中记录了原进程的上下文
+        self.context.save(context);
+
+        // 2. mark the process as ready
+        self.pause();
+    }
 
     /// Restore the process's context
     /// mark the process as running
     pub(super) fn restore(&mut self, context: &mut ProcessContext) {
-        // FIXME: restore the process's context
-        self.context.restore(context); // 同样调用对应结构体方法 restore写入上下文
+        // 1. restore the process's context
+        self.context.restore(context);
 
-        // FIXME: restore the process's page table
-        self.vm_mut().page_table.load(); // .vm_mut()得到ProcessVm, .load()调用对应PageTable方法加载上下文
-        // ？这里需要使用vm_mut()吗？还是vm()就足以
-        self.resume(); // 将进程的状态设置为 Running
-    } // context是需要恢复的的上下文
+        // 2. restore the process's page table
+        self.vm_mut().page_table.load();
+
+        // 3. mark the process as running
+        self.resume();
+    }
 
     pub fn parent(&self) -> Option<Arc<Process>> {
         self.parent.as_ref().and_then(|p| p.upgrade())
     }
 
-    pub fn kill(&mut self, ret: isize) {
-        // FIXME: set exit code
-        // 如果exit_code的值为None，表示进程尚未退出；为Some表示已经退出，并且获取到进程的返回值
-        // 具体的进程的返回值是什么呢？
-        self.exit_code = Some(ret);
-        // FIXME: set status to dead
-        self.status = ProgramStatus::Dead;
-
-        // FIXME: take and drop unused resources
-        // 使用Option提供的方法.take()，安全的取出并消费Option中的值
-        self.proc_data.take();
-        self.proc_vm.take();
-    }
-
     pub fn init_stack_frame(&mut self, entry: VirtAddr, stack_top: VirtAddr) {
         self.context.init_stack_frame(entry, stack_top);
+    }
+
+    fn kill(&mut self, ret: isize) {
+        // 1. set exit code
+        self.exit_code = Some(ret);
+        // 2. set status to dead
+        self.status = ProgramStatus::Dead;
+
+        // 3. take and drop unused resources
+        self.proc_data.take();
+        self.proc_vm.take();
     }
 
     pub fn load_elf(&mut self, elf: &ElfFile) {
@@ -221,62 +196,6 @@ impl ProcessInner {
 
     pub fn is_dead(&self) -> bool {
         self.status == ProgramStatus::Dead
-    }
-
-    // 0x05
-    pub fn fork(&mut self, parent: Weak<Process>) -> ProcessInner {
-        // FIXME: fork the process virtual memory struct
-        // FIXME: calculate the real stack offset
-        let read_stack_offset = ((self.children.len() + 1) as u64) * STACK_MAX_PAGES;
-        let child_vm = self.proc_vm.as_ref().unwrap().fork(read_stack_offset); // 保持逐级调用
-
-        // FIXME: update `rsp` in interrupt stack frame
-        let mut child_context: ProcessContext = self.context;
-        let child_stack_top = (self.context.get_stack_top() & 0xFFFF_FFFF)
-            | (child_vm.stack_start().as_u64() & STACK_START_MASK);
-        child_context.update_rsp(child_stack_top);
-        // FIXME: set the return value 0 for child with `context.set_rax`
-        child_context.set_rax(0);
-        // FIXME: clone the process data struct
-        let child_data = self.proc_data.clone();
-        // FIXME: construct the child process inner
-        // NOTE: return inner because there's no pid record in inner
-        Self {
-            name: self.name.clone(),
-            parent: Some(parent),
-            children: Vec::new(),
-            ticks_passed: 0,
-            status: ProgramStatus::Ready, // rust要求必须初始化完整
-            context: child_context,
-            exit_code: None,
-            proc_data: child_data,
-            proc_vm: Some(child_vm),
-        } // 仿照process中的new方法中新建一个inner结构体
-    }
-
-    pub fn block(&mut self) {
-        self.status = ProgramStatus::Blocked;
-    }
-
-    pub fn set_rax(&mut self, ret: usize) {
-        self.context.set_rax(ret);
-    } // 添加一个方法便于manager.rs的wake_up中可以直接写
-
-    // 0x05: 信号量相关的接口
-    pub fn sem_init(&mut self, key: u32, value: usize) -> bool {
-        self.proc_data.as_mut().unwrap().sem_init(key, value)
-    }
-
-    pub fn sem_remove(&mut self, key: u32) -> bool {
-        self.proc_data.as_mut().unwrap().sem_remove(key)
-    }
-
-    pub fn sem_wait(&mut self, key: u32, pid: ProcessId) -> SemaphoreResult {
-        self.proc_data.as_mut().unwrap().sem_wait(key, pid)
-    }
-
-    pub fn sem_signal(&mut self, key: u32) -> SemaphoreResult {
-        self.proc_data.as_mut().unwrap().sem_signal(key)
     }
 }
 
@@ -326,14 +245,20 @@ impl core::fmt::Debug for Process {
 impl core::fmt::Display for Process {
     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
         let inner = self.inner.read();
+        let memory_size = inner.vm().memory_usage();
+        let (size, unit) = humanized_size(memory_size);
+        let stack_usage_percent = (memory_size as f64) / (STACK_MAX_SIZE as f64) * 100.0;
+
         write!(
             f,
-            " #{:-3} | #{:-3} | {:12} | {:7} | {:?}",
+            " #{:-3} | #{:-3} | {:12} | {:<7} | {:<7} | {:<12} | {:.2}%",
             self.pid.0,
             inner.parent().map(|p| p.pid.0).unwrap_or(0),
             inner.name,
             inner.ticks_passed,
-            inner.status
+            format!("{}", inner.status),
+            format!("{}{}", size, unit),
+            stack_usage_percent,
         )?;
         Ok(())
     }

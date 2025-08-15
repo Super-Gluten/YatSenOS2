@@ -1,4 +1,5 @@
 use crate::drivers::input::try_pop_key;
+use crate::interrupt::serial::UTF8_MAX_SIZE;
 use alloc::collections::BTreeMap;
 use alloc::string::String;
 use pc_keyboard::DecodedKey;
@@ -65,18 +66,25 @@ pub enum Resource {
 }
 
 impl Resource {
+    /// differentiated data reading based on `Resource` filed
+    ///
+    /// # Returns
+    /// - Some(count) : Number of bytes read
+    /// - None:
+    ///   - When read from `Stdout`, `Stderr`.
     pub fn read(&mut self, buf: &mut [u8]) -> Option<usize> {
         match self {
             Resource::Console(stdio) => match stdio {
                 StdIO::Stdin => {
-                    // FIXME: just read from kernel input buffer
-                    if buf.len() < 4 {
-                        // 保证缓冲区能够写入UTF-8
-                        Some(0) // UTF-8最大字节数为4
+                    // 1. ensure `buf` can obtain complete UTF8 sequence
+                    if buf.len() < UTF8_MAX_SIZE {
+                        Some(0)
                     } else {
+                        // 2. just read from kernel input buffer
+                        //      without blocking
                         match try_pop_key() {
+                            // 3. avoid special characters
                             Some(DecodedKey::Unicode(key)) => {
-                                // 排除特殊控制字符
                                 let s = key.encode_utf8(buf);
                                 Some(s.len())
                             }
@@ -90,6 +98,7 @@ impl Resource {
         }
     }
 
+    /// differentiated data reading based on `Resource` filed
     pub fn write(&mut self, buf: &[u8]) -> Option<usize> {
         match self {
             Resource::Console(stdio) => match *stdio {

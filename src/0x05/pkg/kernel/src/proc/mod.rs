@@ -1,36 +1,60 @@
+//! 进程管理模块
+//!
+//! 该模块提供了操作系统核心的进程管理功能，包括：
+//! - 进程创建、调度和销毁
+//! - 进程上下文切换
+//! - 虚拟内存管理（用户栈、内核栈、页表映射）
+//! - 内核线程管理
+//!
+//! # 主要组件
+//! - **进程管理**：
+//!   - [`manager`] 定义 ProcessManager，维护就绪队列与进程键值对
+//!   - [`processor`] 定义 Processor，当前CPU的运行进程记录器
+//! - **进程结构与数据**：
+//!   - [`process`] 定义 Process，提供与进程生命周期相关的方法
+//!   - [`pid`] 定义 ProcessId，记录进程的特定id
+//!   - [`context`] 定义 ProcessContext，记录寄存器堆信息和中断栈值
+//!   - [`data`] 定义 ProcessData，记录环境信息
+//!   - [`paging`] 定义 PageTableContext，记录页表信息
+//! - **虚拟内存管理**：
+//!   - [`vm`] 提供进程虚拟内存管理，包括用户栈、内核栈和内存映射
+//!
+//! # 主要方法
+//! - 管理器初始化： [`init`]
+//! - 进程切换： [`switch`], [`process_exit`]
+//! - 状态查看： [`print_process_list`], [`env`], [`list_app`]
+//! - 错误处理： [`handle_page_fault`]
+//!
+
 mod context;
 mod data;
-pub mod manager; // 因为在util/mod.rs中引用了proc::*，且需要manager
+pub mod manager;
 mod paging;
 mod pid;
 mod process;
 pub mod processor;
 mod vm;
 
-pub mod sync; // 0x05 add
-
-use crate::memory::PAGE_SIZE;
 use manager::*;
 use process::*;
-use processor::*; // 在switch函数中使用了proceeor相关的函数
-use sync::*; // 0x05 add
+use processor::*;
 use vm::*;
 
 use alloc::string::String;
 pub use context::ProcessContext;
+use core::fmt;
 pub use data::ProcessData;
-pub use manager::ProcessManager;
 pub use paging::PageTableContext;
 pub use pid::ProcessId;
 
 use x86_64::VirtAddr;
 use x86_64::structures::idt::PageFaultErrorCode;
-pub const KERNEL_PID: ProcessId = ProcessId(1); // 常量定义：内核进程pid为1
+/// Constant defination: kernel's pid is always 1
+pub const KERNEL_PID: ProcessId = ProcessId(1);
 
 use alloc::format;
 use alloc::string::ToString;
-use alloc::sync::{Arc, Weak};
-use alloc::vec::Vec;
+use alloc::sync::Arc;
 use xmas_elf::ElfFile;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -43,23 +67,20 @@ pub enum ProgramStatus {
 
 /// init process manager
 pub fn init(boot_info: &'static boot::BootInfo) {
-    // 0x04 add parameter
     let proc_vm = ProcessVm::new(PageTableContext::new()).init_kernel_vm();
 
     trace!("Init kernel vm: {:#?}", proc_vm);
 
     // kernel process
     let kproc = {
-        /* FIXME: create kernel process */
         Process::new(
             "kernel".into(),
             None,
-            Some(proc_vm), // 使用已经建好的proc_vm就好
+            Some(proc_vm),
             Some(ProcessData::new()),
         )
     };
 
-    // 0x04 add :
     let app_list = boot_info.loaded_apps.as_ref();
     manager::init(kproc, app_list);
 
@@ -68,7 +89,7 @@ pub fn init(boot_info: &'static boot::BootInfo) {
 
 pub fn switch(context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        // FIXME: switch to the next process
+        //       switch to the next process
         //      - save current process's context
         let manager = get_process_manager();
         manager.save_current(context);
@@ -78,7 +99,6 @@ pub fn switch(context: &mut ProcessContext) {
 
         //      - restore next process's context
         manager.switch_next(context);
-        // 三个相关的函数功能见manager.rs对应函数
     });
 }
 
@@ -90,20 +110,20 @@ pub fn print_process_list() {
 
 pub fn env(key: &str) -> Option<String> {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        // FIXME: get current process's environment variable
+        // get current process's environment variable
         get_process_manager().current().read().env(key)
-        // Process的.read()返回 ProcessInner.read()，然后通过deref方法解引用为ProcessData
-        // 最后使用ProcessData中定义的方法env
     })
 }
 
-pub fn process_exit(ret: isize, context: &mut ProcessContext) {
+pub fn process_exit(ret: isize) -> ! {
     x86_64::instructions::interrupts::without_interrupts(|| {
-        let manager = get_process_manager();
-        // FIXME: implement this for ProcessManager
-        manager.kill_current(ret);
-        manager.switch_next(context);
-    })
+        get_process_manager().kill_current(ret);
+        info!("done killing");
+    });
+
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
 
 pub fn handle_page_fault(addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
@@ -114,37 +134,36 @@ pub fn handle_page_fault(addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
 
 pub fn list_app() {
     x86_64::instructions::interrupts::without_interrupts(|| {
+        // list all app and related information
         let app_list = get_process_manager().app_list();
         if app_list.is_none() {
             println!("[!] No app found in list!");
             return;
         }
 
-        // let apps = app_list
-        //     .unwrap() // 取出Option<>中的'static AppListRef
-        //     .iter() // 遍历array<>中每一个App元素
-        //     .map(|app| app.name.as_str()) // 将其中App元素映射为它的名字，转为&str
-        //     .collect::<Vec<&str>>() // 这个str加入Vec<&str>的末尾
-        //     .join(", "); // 元素之间采用','间隔开
-        // println!("[+] App list: {}", apps);
-
-        // TODO: print more information like size, entry point, etc.
-        println!("[+] App list ({} applications):", app_list.unwrap().len()); // 打印总共有多少个应用
-        for app in app_list.unwrap().iter() {
+        // print the number of application
+        println!("[+] App list ({} applications):", app_list.unwrap().len());
+        println!(
+            "{:<2} | {:<10} | {:<8} | {}",
+            "#", "Name", "Size", "Entry_point"
+        );
+        // print app information including name, size and entry point.
+        for (index, app) in app_list.unwrap().iter().enumerate() {
             let elf = &app.elf;
             println!(
-                "{}: {} , {}",
+                "{:<2} | {:<10} | {:<8} | {:#x}",
+                format!("{} ", index + 1),
                 app.name,
                 format!("{} kb", elf.input.len() / 1024), // 通过elf文件的读取长度计算实际大小
                 elf.header.pt2.entry_point()              // elf头文件有入口点
             );
         }
     });
-} // 0x04：用于列出当前系统中的所有用户程序和相关信息
+}
 
-// 0x04 add: spawn && elf_spawn && read && write
 pub fn spawn(name: &str) -> Option<ProcessId> {
     let app = x86_64::instructions::interrupts::without_interrupts(|| {
+        // find the corrsponding app by name and spawn it
         let app_list = get_process_manager().app_list()?;
         app_list.iter().find(|&app| app.name.eq(name))
     })?;
@@ -155,7 +174,7 @@ pub fn spawn(name: &str) -> Option<ProcessId> {
 pub fn elf_spawn(name: String, elf: &ElfFile) -> Option<ProcessId> {
     let pid = x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        let process_name = name.to_lowercase();
+        let process_name: String = name.to_lowercase();
         let parent = Arc::downgrade(&manager.current());
         let pid = manager.spawn(elf, name, Some(parent), None);
 
@@ -177,7 +196,6 @@ pub fn write(fd: u8, buf: &[u8]) -> isize {
 pub fn exit(ret: isize, context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        // FIXME: implement this for ProcessManager
         manager.kill_current(ret);
         manager.switch_next(context);
     })
@@ -197,78 +215,24 @@ pub fn still_alive(pid: ProcessId) -> bool {
 pub fn wait_pid(pid: ProcessId, context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        if let Some(ret) = manager.get_exit_code(pid) {
-            context.set_rax(ret as usize);
-        } else {
-            manager.wait_pid(pid);
+        let proc = manager.get_proc(&pid).unwrap();
+        if !still_alive(pid) {
+            let exit_code: isize = proc.read().exit_code().unwrap();
+            context.set_rax(exit_code as usize);
             manager.save_current(context);
-            manager.current().write().block();
             manager.switch_next(context);
         }
-    })
+    });
 }
 
-// 0x05 add
-pub fn fork(context: &mut ProcessContext) {
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        let manager = get_process_manager();
-        // FIXME: save_current as parent
-        manager.save_current(&context);
-        // FIXME: fork to get child
-        let child = manager.fork(); // 逐层调用，委托给ProcessManager::fork
-        // FIXME: push to child & parent to ready queue
-        manager.push_ready(manager.current().pid()); // 压入当前进程也就是parent进程
-        manager.push_ready(child.pid());
-        // FIXME: switch to next process
-        manager.switch_next(context);
-    })
-}
-
-pub fn sem_init(key: u32, val: usize) -> usize {
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        let manager = get_process_manager();
-        let ret = manager.current().write().sem_init(key, val);
-        ret as usize
-    })
-}
-
-pub fn sem_remove(key: u32) -> usize {
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        let manager = get_process_manager();
-        let ret = manager.current().write().sem_remove(key);
-        ret as usize
-    })
-}
-
-pub fn sem_wait(key: u32, context: &mut ProcessContext) {
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        let manager = get_process_manager();
-        let pid = processor::get_pid();
-        let ret = manager.current().write().sem_wait(key, pid);
-        match ret {
-            SemaphoreResult::Ok => context.set_rax(0),
-            SemaphoreResult::NotExist => context.set_rax(1),
-            SemaphoreResult::Block(pid) => {
-                // FIXME: save, block it, then switch to next
-                //        use `save_current` and `switch_next`
-                manager.save_current(context);
-                manager.block(&pid);
-                manager.switch_next(context);
-            }
-            _ => unreachable!(),
-        }
-    })
-}
-
-pub fn sem_signal(key: u32, context: &mut ProcessContext) {
-    x86_64::instructions::interrupts::without_interrupts(|| {
-        let manager = get_process_manager();
-        let ret = manager.current().write().sem_signal(key);
-        match ret {
-            SemaphoreResult::Ok => context.set_rax(0),
-            SemaphoreResult::NotExist => context.set_rax(1),
-            SemaphoreResult::WakeUp(pid) => manager.wake_up(pid, None),
-            _ => unreachable!(),
+impl fmt::Display for ProgramStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let status_str: &'static str = match self {
+            ProgramStatus::Running => "Running",
+            ProgramStatus::Ready => "Ready  ",
+            ProgramStatus::Blocked => "Blocked",
+            ProgramStatus::Dead => "Dead   ",
         };
-    })
+        write!(f, "{}", status_str)
+    }
 }

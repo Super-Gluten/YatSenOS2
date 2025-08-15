@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-use lib::sync::Semaphore;
 use lib::*;
 
 extern crate lib;
@@ -9,11 +8,9 @@ extern crate lib;
 const THREAD_COUNT: usize = 8;
 static mut COUNTER: isize = 0;
 
-static SEMAPHORE: Semaphore = Semaphore::new(0);
-
 fn main() -> isize {
     let mut pids = [0u16; THREAD_COUNT];
-    SEMAPHORE.init(1);
+
     for i in 0..THREAD_COUNT {
         let pid = sys_fork();
         if pid == 0 {
@@ -33,7 +30,6 @@ fn main() -> isize {
         sys_wait_pid(pids[i]);
     }
 
-    SEMAPHORE.remove();
     println!("COUNTER result: {}", unsafe { COUNTER });
 
     0
@@ -42,9 +38,7 @@ fn main() -> isize {
 fn do_counter_inc() {
     for _ in 0..100 {
         // FIXME: protect the critical section
-        SEMAPHORE.wait();
         inc_counter();
-        SEMAPHORE.signal();
     }
 }
 

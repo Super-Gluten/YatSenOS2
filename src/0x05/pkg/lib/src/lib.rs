@@ -11,7 +11,6 @@ extern crate syscall_def;
 #[macro_use]
 pub mod io;
 pub mod allocator;
-pub mod sync;
 pub extern crate alloc;
 
 mod syscall;
@@ -20,7 +19,6 @@ use core::fmt::*;
 
 pub use alloc::*;
 pub use io::*;
-pub use sync::*;
 pub use syscall::*;
 
 #[macro_export]

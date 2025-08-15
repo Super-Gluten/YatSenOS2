@@ -10,7 +10,7 @@ use x86_64::{
 
 pub struct Cr3RegValue {
     pub addr: PhysFrame,
-    pub flags: Cr3Flags, // 使用x86_64提供的Cr3Flags
+    pub flags: Cr3Flags, // use Cr3Flags defined in x86_64
 }
 
 impl Cr3RegValue {
@@ -70,17 +70,6 @@ impl PageTableContext {
             )
         }
     }
-
-    pub fn using_count(&self) -> usize {
-        Arc::strong_count(&self.reg)
-    }
-
-    pub fn fork(&self) -> Self {
-        // forked process shares the page table
-        Self {
-            reg: self.reg.clone(),
-        }
-    }
 }
 
 impl core::fmt::Debug for PageTableContext {
@@ -88,7 +77,6 @@ impl core::fmt::Debug for PageTableContext {
         f.debug_struct("PageTable")
             .field("addr", &self.reg.addr)
             .field("flags", &self.reg.flags)
-            .field("refs", &self.using_count()) // 0x05 add 调试信息
             .finish()
     }
 }

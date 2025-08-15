@@ -43,7 +43,6 @@ pub fn map_range(
     count: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    user_access: bool,
 ) -> Result<PageRange, MapToError<Size4KiB>> {
     let range_start = Page::containing_address(VirtAddr::new(addr));
     let range_end = range_start + count;
@@ -55,11 +54,7 @@ pub fn map_range(
     );
 
     // default flags for stack
-    let mut flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
-
-    if user_access {
-        flags.insert(PageTableFlags::USER_ACCESSIBLE);
-    } // 不添加这一项，将会导致shell因为缺少这一项而无法运行！
+    let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
     for page in Page::range(range_start, range_end) {
         let frame = frame_allocator
@@ -92,7 +87,7 @@ pub fn load_elf(
     physical_offset: u64,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    user_access: bool, // 0x04 add
+    user_access: bool,
 ) -> Result<(), MapToError<Size4KiB>> {
     trace!("Loading ELF file...{:?}", elf.input.as_ptr());
 
@@ -117,13 +112,14 @@ pub fn load_elf(
 /// Load & Map ELF segment
 ///
 /// load segment to new frame and set page table
+/// information related to PageTableFlags can be found on https://os.phil-opp.com/zh-CN/paging-introduction/#di-zhi-zhuan-huan-fan-li
 fn load_segment(
     elf: &ElfFile,
     physical_offset: u64,
     segment: &program::ProgramHeader,
     page_table: &mut impl Mapper<Size4KiB>,
     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-    user_access: bool, // 0x04 add: 用于判断是否需要添加USER_ACCESSIBLE标志
+    user_access: bool,
 ) -> Result<(), MapToError<Size4KiB>> {
     trace!("Loading & mapping segment: {:#x?}", segment);
 
@@ -132,26 +128,19 @@ fn load_segment(
     let file_offset = segment.offset() & !0xfff;
     let virt_start_addr = VirtAddr::new(segment.virtual_addr());
 
-    // 初始化页表标志，包含PRESENT表示该页表项有效
     let mut page_table_flags = PageTableFlags::PRESENT;
 
-    // FIXME: handle page table flags with segment flags
-    // unimplemented!("Handle page table flags with segment flags!");
-    // 关于PageTableFlags的相关信息可在 https://os.phil-opp.com/zh-CN/paging-introduction/#di-zhi-zhuan-huan-fan-li 中找到
-    // 处理写权限，ELF 可写 -> 页表WRITALBE标志 -> 页表可写
+    // handle page table flags with segment flags
+    // write, execute, user_accessible
     if segment.flags().is_write() {
         page_table_flags |= PageTableFlags::WRITABLE;
     }
 
-    // ELF 不可执行 -> 页表NO_EXECUTE标志 -> 页表禁用执行
     if !segment.flags().is_execute() {
         page_table_flags |= PageTableFlags::NO_EXECUTE
     }
 
-    // // 默认设置允许用户空间访问
-    // page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
-
-    // 0x04 add: 根据load_elf的参数决定页表是否添加USER_ACCESSIBLE标志位
+    // determine whether to add the USER_ACCESSIBLE sign based on the parameters
     if user_access {
         page_table_flags |= PageTableFlags::USER_ACCESSIBLE;
     }
@@ -235,7 +224,6 @@ fn load_segment(
     Ok(())
 }
 
-// 0x04 add 自定义函数：用于创建用户态堆且不改变原有map_range
 /// Map a range of memory for user heap
 ///
 /// allocate frames and map to specified address (R/W)
@@ -280,4 +268,43 @@ pub fn user_map_range(
     );
 
     Ok(Page::range(range_start, range_end))
+}
+
+/// UnMap a range of memory
+///
+/// deallocate frames and map to specified address (R/W)
+pub fn unmap_range(
+    addr: u64,
+    count: u64,
+    page_table: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameDeallocator<Size4KiB>,
+) -> Result<(), MapToError<Size4KiB>> {
+    let range_start = Page::containing_address(VirtAddr::new(addr));
+    let range_end = range_start + count;
+
+    trace!(
+        "Page Range: {:?}({})",
+        Page::range(range_start, range_end),
+        count
+    );
+
+    for page in Page::range(range_start, range_end) {
+        unsafe {
+            let (frame, flush) = page_table.unmap(page).unwrap();
+
+            frame_allocator.deallocate_frame(frame);
+            flush.flush();
+        }
+    }
+
+    trace!(
+        "Map hint: {:#x} -> {:#x}",
+        addr,
+        page_table
+            .translate_page(range_start)
+            .unwrap()
+            .start_address()
+    );
+
+    Ok(())
 }

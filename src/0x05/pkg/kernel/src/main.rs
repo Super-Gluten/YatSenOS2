@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 
-use log::info;
 use ysos::*;
 use ysos_kernel as ysos;
 
@@ -20,5 +19,7 @@ pub fn spawn_init() -> proc::ProcessId {
     print!("\x1b[1;1H\x1b[2J");
 
     proc::list_app();
+    // syscall!(Syscall::Stat);
+    // syscall!(Syscall::Exit);
     proc::spawn("sh").unwrap()
 }

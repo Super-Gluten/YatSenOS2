@@ -1,29 +1,19 @@
 use super::*;
-use crate::memory::{
-    self, PAGE_SIZE,
-    allocator::{ALLOCATOR, HEAP_SIZE},
-    get_frame_alloc_for_sure,
-};
+use crate::memory::get_frame_alloc_for_sure;
 use alloc::{collections::*, format, sync::Arc, sync::Weak};
-use core::ops::DerefMut;
 use spin::{Mutex, RwLock};
 use vm::*;
-
 use xmas_elf::ElfFile;
 
 pub static PROCESS_MANAGER: spin::Once<ProcessManager> = spin::Once::new();
 
 pub fn init(init: Arc<Process>, apps: boot::AppListRef) {
-    // 传入了一个Arc，且引用process
-
-    // FIXME: set init process as Running
-    // 使用write()函数获取inner的写锁，然后resume()函数修改状态
+    // 1 set init process as Running
     init.write().resume();
     // info!("kproc has been setting as running");
     // info!("kproc status {:?}", init.read().status());
 
-    // FIXME: set processor's current pid to init's pid
-    // 调用processor.rs中的可用接口set_pid
+    // 2 set processor's current pid to init's pid
     processor::set_pid(init.pid());
     PROCESS_MANAGER.call_once(|| ProcessManager::new(init, apps));
 }
@@ -37,8 +27,7 @@ pub fn get_process_manager() -> &'static ProcessManager {
 pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>, // 用读写锁保护的进程键值对
     ready_queue: Mutex<VecDeque<ProcessId>>,              // 用于进程管理的双端队列
-    app_list: boot::AppListRef, // 0x04: 采用boot/lib.rs中定义的Option<&AppList>
-    wait_queue: Mutex<BTreeMap<ProcessId, BTreeSet<ProcessId>>>, // 0x05: 等待队列
+    app_list: boot::AppListRef,                           // 用户程序的列表
 }
 
 impl ProcessManager {
@@ -54,7 +43,6 @@ impl ProcessManager {
             processes: RwLock::new(processes),
             ready_queue: Mutex::new(ready_queue),
             app_list: apps,
-            wait_queue: Mutex::new(BTreeMap::new()), // 0x05 add
         }
     }
 
@@ -66,7 +54,7 @@ impl ProcessManager {
     #[inline]
     pub fn push_ready(&self, pid: ProcessId) {
         self.ready_queue.lock().push_back(pid);
-    } // .ready_queue.lock()返回互斥锁，.push_back()压入进程的pid
+    }
 
     #[inline]
     pub fn add_proc(&self, pid: ProcessId, proc: Arc<Process>) {
@@ -78,15 +66,17 @@ impl ProcessManager {
         self.processes.read().get(pid).cloned()
     }
 
+    /// # Returns
+    /// - Some(pid) => pid
+    /// None => KERNEL_PID to meet phased requirement（阶段性需求）
     #[inline]
     pub fn pop_ready(&self) -> ProcessId {
         let id = match self.ready_queue.lock().pop_front() {
             Some(pid) => pid,
             _ => KERNEL_PID,
-            // 当没有对应进程的时候，返回内核进程的pid，满足阶段性成果需求
         };
         id
-    } // 仿照上述的push_ready()函数，取出双端队列的队头进程的pid
+    }
 
     pub fn current(&self) -> Arc<Process> {
         self.get_proc(&processor::get_pid())
@@ -94,53 +84,65 @@ impl ProcessManager {
     }
 
     pub fn save_current(&self, context: &ProcessContext) {
-        // FIXME: update current process's tick count
+        // 1. update current process's tick count
         let proc = self.current();
-        // .current()返回Arc<process>
-        // 谨慎Process内定义的方法.write()的返回类型！
-        // 需要.write() 获取写锁保护着的ProcessInner
-        proc.write().tick(); // 调用ProcessInner的tick函数
+        proc.write().tick();
 
-        // FIXME: save current process's context
-        proc.write().save(context); // 调用ProcessInner的save函数
+        // 2. save current process's context
+        proc.write().save(context);
     }
 
+    /// Blocking to obtain a ready process and switching to it
     pub fn switch_next(&self, context: &mut ProcessContext) -> ProcessId {
         loop {
-            // FIXME: fetch the next process from ready queue
+            // 1. fetch the next process from ready queue
 
-            // FIXME: check if the next process is ready,
-            //        continue to fetch if not ready
             let next_pid = self.pop_ready();
             let next_proc = match self.get_proc(&next_pid) {
                 None => continue,
                 Some(proc) => proc,
             };
 
+            // 2. check if the next process is ready,
+            // continue to fetch if not ready
             if next_proc.read().is_ready() {
-                // FIXME: restore next process's context
-                next_proc.write().restore(context); // 调用ProcessInner中的restore()方法，将上下文写入context
-                // FIXME: update processor's current pid
-                processor::set_pid(next_pid); // 调用Processor中的set_pid方法
-                // FIXME: return next process's pid
+                // 3. restore next process's context
+                next_proc.write().restore(context);
+                // 4. update processor's current pid
+                processor::set_pid(next_pid);
+                // 5. return next process's pid
                 return next_pid;
             }
         }
     }
 
-    pub fn kill_current(&self, ret: isize) {
+    pub fn kill_current(&self, ret: isize) -> bool {
+        let pid = processor::get_pid().clone();
+        if pid == KERNEL_PID {
+            info!("The kernel process is under protected and can't be killed");
+            return false;
+        }
         self.kill(processor::get_pid(), ret);
+        return true;
     }
 
+    /// handle page fault
+    ///
+    /// # Returns
+    /// - false
+    ///  - if the fault caused by other unpredicted reason
+    ///  - failed to handle the fault
+    /// - true
+    ///  - if the fault triggerd by PROTECTION_VIOLATION with CAUSED_BY_WRITE
+    ///  - and handle it successfully
     pub fn handle_page_fault(&self, addr: VirtAddr, err_code: PageFaultErrorCode) -> bool {
-        // FIXME: handle page fault
-        if !err_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE) {
+        if !err_code.contains(PageFaultErrorCode::PROTECTION_VIOLATION)
+            && !err_code.contains(PageFaultErrorCode::CAUSED_BY_WRITE)
+        {
             return false;
-        } // 不是由于越权访问和写操作导致的 其他非预期错误 直接返回false
+        }
         self.current().write().handle_page_fault(addr)
-        // 调用ProcessInner中的相应缺页处理函数
-    } // 用于处理缺页异常的函数，在无法解决的情况下返回false，
-    // 可能解决的情况：调用ProcessInner中的 handle_page_fault 函数
+    }
 
     pub fn kill(&self, pid: ProcessId, ret: isize) {
         let proc = self.get_proc(&pid);
@@ -149,12 +151,6 @@ impl ProcessManager {
             warn!("Process #{} not found.", pid);
             return;
         }
-        // 0x05 add
-        if let Some(pids) = self.wait_queue.lock().remove(&pid) {
-            for pid in pids {
-                self.wake_up(pid, Some(ret));
-            }
-        } // finish add
 
         let proc = proc.unwrap();
 
@@ -165,11 +161,15 @@ impl ProcessManager {
 
         trace!("Kill {:#?}", &proc);
         info!("ret = {}", ret);
+        proc.dealloc_current_stack();
         proc.kill(ret);
     }
 
     pub fn print_process_list(&self) {
-        let mut output = String::from("  PID | PPID | Process Name |  Ticks  | Status\n");
+        let mut output = String::from(format!(
+            " {:>4} | {:>4} | {:12} | {:<7} | {:<7} | {:<12} | {:<7}\n",
+            "PID", "PPID", "Process Name", "Ticks", "Status", "Memory Usage", "Percent"
+        ));
 
         self.processes
             .read()
@@ -177,10 +177,9 @@ impl ProcessManager {
             .filter(|p| p.read().status() != ProgramStatus::Dead)
             .for_each(|p| output += format!("{}\n", p).as_str());
 
-        // TODO: print memory usage of kernel heap
+        // Why get the mutex lock and drop it immediately?
+        // - to eusure that the frame allocator exists but we don't require it this moment
         drop(get_frame_alloc_for_sure());
-        // get_frame_alloc_for_sure()返回 帧分配器的互斥锁，确保 帧分配器存在
-        // 因为不需要实际使用这个分配器，所以立刻通过drop()释放掉
 
         output += format!("Queue  : {:?}\n", self.ready_queue.lock()).as_str();
 
@@ -189,7 +188,6 @@ impl ProcessManager {
         print!("{}", output);
     }
 
-    // 0x04 add
     pub fn spawn(
         &self,
         elf: &ElfFile,
@@ -203,23 +201,25 @@ impl ProcessManager {
         let proc = Process::new(name, parent, proc_vm, proc_data);
 
         let mut inner = proc.write();
-        // FIXME: load elf to process pagetable
-        inner.load_elf(elf); // 调用ProcessInner中的load_elf()
+        // 1. use `load_elf` to process pagetable
+        inner.load_elf(elf);
         drop(inner);
-        // FIXME: alloc new stack for process
+
+        // 2. alloc new stack for process
         let stack_top = proc.alloc_init_stack();
         let entry = VirtAddr::new(elf.header.pt2.entry_point());
 
         let mut inner = proc.write();
         inner.init_stack_frame(entry, stack_top);
-        // FIXME: mark process as ready
+
+        // 3. mark process as ready
         inner.pause();
         drop(inner);
 
         trace!("New {:#?}", &proc);
-
         let pid = proc.pid();
-        // FIXME: something like kernel thread
+
+        // 4. something like kernel thread
         self.add_proc(pid, proc);
         self.push_ready(pid);
         pid
@@ -233,67 +233,5 @@ impl ProcessManager {
     #[inline]
     pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize {
         self.current().read().read(fd, buf)
-    }
-
-    // 0x05 add:
-    // 选择了同样返回一个子进程的Arc引用，因为Manager中需要获取它的pid
-    pub fn fork(&self) -> Arc<Process> {
-        // FIXME: get current process
-        let current_process = self.current();
-        // FIXME: fork to get child
-        let child: Arc<Process> = current_process.fork(); // 逐层调用
-        // FIXME: add child to process list
-        self.add_proc(child.pid(), child.clone()); // 这里压入克隆体，防止借用
-        // FOR DBG: maybe print the process ready queue?
-        debug!("The process ready queue: {:?}", self.ready_queue.lock());
-        child
-    }
-
-    /// Block the process with the given pid
-    pub fn block(&self, pid: &ProcessId) {
-        if let Some(proc) = self.get_proc(&pid) {
-            // FIXME: set the process as blocked
-            proc.write().block(); // 调用ProcessInner中的对应函数
-        }
-    }
-
-    pub fn wait_pid(&self, pid: ProcessId) {
-        let mut wait_queue = self.wait_queue.lock();
-        // FIXME: push the current process to the wait queue
-        //        `processor::get_pid()` is waiting for `pid`
-        let entry = wait_queue.entry(pid).or_default();
-        entry.insert(processor::get_pid());
-    }
-
-    pub fn get_exit_code(&self, pid: ProcessId) -> Option<isize> {
-        let exit_code = match self.processes.read().get(&pid) {
-            Some(proc) => {
-                if proc.read().is_dead() {
-                    proc.read().exit_code()
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        };
-        exit_code
-    }
-
-    /// Wake up the process with the given pid
-    ///
-    /// If `ret` is `Some`, set the return value of the process
-    pub fn wake_up(&self, pid: ProcessId, ret: Option<isize>) {
-        if let Some(proc) = self.get_proc(&pid) {
-            let mut inner = proc.write();
-            if let Some(ret) = ret {
-                // FIXME: set the return value of the process
-                //        like `context.set_rax(ret as usize)`
-                inner.set_rax(ret as usize);
-            }
-            // FIXME: set the process as ready
-            inner.pause();
-            // FIXME: push to ready queue
-            self.push_ready(pid);
-        }
     }
 }
