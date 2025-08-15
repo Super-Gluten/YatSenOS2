@@ -25,7 +25,7 @@ impl Stdin {
             let ret = sys_read(0, buf);
 
             if ret.is_none() {
-                break;
+                continue;
             } else {
                 let count: usize = ret.unwrap();
                 // 3. match and handle different keys with utf8 characters
@@ -38,8 +38,8 @@ impl Stdin {
                                 '\x08' | '\x7F' => {
                                     if !line.is_empty() {
                                         line.pop();
+                                        sys_write(1, "\x08\x20\x08".as_bytes());
                                     }
-                                    sys_write(1, "\x08\x20\x08".as_bytes());
                                 }
                                 
                                 // Handle newline (end of input)
@@ -62,9 +62,6 @@ impl Stdin {
                 }
             }
         }
-
-        // 4. return string
-        line
     }
 }
 
