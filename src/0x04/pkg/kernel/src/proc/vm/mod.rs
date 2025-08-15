@@ -100,6 +100,18 @@ impl ProcessVm {
 
         self.stack.init(mapper, alloc);
     }
+
+    pub fn clean_up_stack(&self) {
+        let page_table = &mut self.page_table.mapper();
+        let frame_allocator = &mut *get_frame_alloc_for_sure();
+
+        elf::unmap_range(
+            self.stack.stack_start().as_u64(),
+            self.stack.stack_usage(),
+            page_table,
+            frame_allocator,
+        ).expect("Failed to clean up current process' stack");
+    }
 }
 
 impl core::fmt::Debug for ProcessVm {

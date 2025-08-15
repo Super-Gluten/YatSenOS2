@@ -166,6 +166,7 @@ impl ProcessManager {
 
         trace!("Kill {:#?}", &proc);
         info!("ret = {}", ret);
+        proc.dealloc_current_stack();
         proc.kill(ret);
     }
 

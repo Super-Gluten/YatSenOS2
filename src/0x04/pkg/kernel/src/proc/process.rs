@@ -95,6 +95,10 @@ impl Process {
     pub fn alloc_init_stack(&self) -> VirtAddr {
         self.write().vm_mut().init_proc_stack(self.pid)
     }
+
+    pub fn dealloc_current_stack(&self) {
+        self.write().vm_mut().clean_up_stack()
+    }
 }
 
 impl ProcessInner {

@@ -269,3 +269,44 @@ pub fn user_map_range(
 
     Ok(Page::range(range_start, range_end))
 }
+
+/// UnMap a range of memory
+///
+/// deallocate frames and map to specified address (R/W)
+pub fn unmap_range(
+    addr: u64,
+    count: u64,
+    page_table: &mut impl Mapper<Size4KiB>,
+    frame_allocator: &mut impl FrameDeallocator<Size4KiB>,
+) -> Result<(), MapToError<Size4KiB>> {
+    let range_start = Page::containing_address(VirtAddr::new(addr));
+    let range_end = range_start + count;
+
+    trace!(
+        "Page Range: {:?}({})",
+        Page::range(range_start, range_end),
+        count
+    );
+
+    for page in Page::range(range_start, range_end) {
+        unsafe {
+            let (frame, flush) = 
+                page_table.unmap(page).unwrap();
+
+            frame_allocator
+                .deallocate_frame(frame);
+            flush.flush();
+        }
+    }
+
+    trace!(
+        "Map hint: {:#x} -> {:#x}",
+        addr,
+        page_table
+            .translate_page(range_start)
+            .unwrap()
+            .start_address()
+    );
+
+    Ok(())
+}

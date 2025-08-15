@@ -242,6 +242,14 @@ impl Stack {
     pub fn memory_usage(&self) -> u64 {
         self.usage * crate::memory::PAGE_SIZE
     }
+
+    pub fn stack_start(&self) -> VirtAddr {
+        self.range.start.start_address()
+    }
+
+    pub fn stack_usage(&self) -> u64 {
+        self.usage
+    }
 }
 
 impl core::fmt::Debug for Stack {
