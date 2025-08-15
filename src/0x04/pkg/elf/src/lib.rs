@@ -54,7 +54,7 @@ pub fn map_range(
     );
 
     // default flags for stack
-    let mut flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
+    let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
     for page in Page::range(range_start, range_end) {
         let frame = frame_allocator
@@ -290,11 +290,9 @@ pub fn unmap_range(
 
     for page in Page::range(range_start, range_end) {
         unsafe {
-            let (frame, flush) = 
-                page_table.unmap(page).unwrap();
+            let (frame, flush) = page_table.unmap(page).unwrap();
 
-            frame_allocator
-                .deallocate_frame(frame);
+            frame_allocator.deallocate_frame(frame);
             flush.flush();
         }
     }

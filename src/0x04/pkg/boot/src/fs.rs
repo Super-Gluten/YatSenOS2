@@ -7,7 +7,6 @@ use xmas_elf::ElfFile;
 use super::{App, AppList};
 use arrayvec::{ArrayString, ArrayVec};
 
-
 /// Open root directory
 pub fn open_root() -> Directory {
     let handle = uefi::boot::get_handle_for_protocol::<SimpleFileSystem>()
@@ -75,7 +74,6 @@ pub fn free_elf(elf: ElfFile) {
 ///
 /// List all file under "APP" and load them.
 pub fn load_apps() -> AppList {
-    let mut root = open_root();
     let mut buf = [0; 8];
     let cstr_path: &uefi::CStr16 = uefi::CStr16::from_str_with_buf("\\APP\\", &mut buf).unwrap();
 
@@ -120,7 +118,7 @@ pub fn load_apps() -> AppList {
 
                 let elf = {
                     // 4. load file with `load_file` function
-                    //    check if the type of `file` is RegularFile 
+                    //    check if the type of `file` is RegularFile
                     let elf_file = load_file(file.into_regular_file().as_mut().unwrap());
                     // 5. convert file to `ElfFile`
                     ElfFile::new(elf_file).unwrap()

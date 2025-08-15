@@ -70,7 +70,7 @@ impl Resource {
     ///
     /// # Returns
     /// - Some(count) : Number of bytes read
-    /// - None: 
+    /// - None:
     ///   - When read from `Stdout`, `Stderr`.
     pub fn read(&mut self, buf: &mut [u8]) -> Option<usize> {
         match self {

@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-use log::info;
-use syscall_def::{Syscall, syscall};
 use ysos::*;
 use ysos_kernel as ysos;
 

@@ -1,11 +1,6 @@
 use super::*;
-use crate::memory::{
-    self, PAGE_SIZE,
-    allocator::{ALLOCATOR, HEAP_SIZE},
-    get_frame_alloc_for_sure,
-};
+use crate::memory::get_frame_alloc_for_sure;
 use alloc::{collections::*, format, sync::Arc, sync::Weak};
-use core::ops::DerefMut;
 use spin::{Mutex, RwLock};
 use vm::*;
 use xmas_elf::ElfFile;
@@ -32,7 +27,7 @@ pub fn get_process_manager() -> &'static ProcessManager {
 pub struct ProcessManager {
     processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>, // 用读写锁保护的进程键值对
     ready_queue: Mutex<VecDeque<ProcessId>>,              // 用于进程管理的双端队列
-    app_list: boot::AppListRef, // 用户程序的列表
+    app_list: boot::AppListRef,                           // 用户程序的列表
 }
 
 impl ProcessManager {
@@ -171,12 +166,10 @@ impl ProcessManager {
     }
 
     pub fn print_process_list(&self) {
-        let mut output = String::from(
-            format!(
-                " {:>4} | {:>4} | {:12} | {:<7} | {:<7} | {:<12} | {:<7}\n",
-                "PID", "PPID", "Process Name", "Ticks", "Status", "Memory Usage", "Percent"
-            )
-        );
+        let mut output = String::from(format!(
+            " {:>4} | {:>4} | {:12} | {:<7} | {:<7} | {:<12} | {:<7}\n",
+            "PID", "PPID", "Process Name", "Ticks", "Status", "Memory Usage", "Percent"
+        ));
 
         self.processes
             .read()
@@ -208,23 +201,25 @@ impl ProcessManager {
         let proc = Process::new(name, parent, proc_vm, proc_data);
 
         let mut inner = proc.write();
-        // FIXME: load elf to process pagetable
-        inner.load_elf(elf); // 调用ProcessInner中的load_elf()
+        // 1. use `load_elf` to process pagetable
+        inner.load_elf(elf);
         drop(inner);
-        // FIXME: alloc new stack for process
+
+        // 2. alloc new stack for process
         let stack_top = proc.alloc_init_stack();
         let entry = VirtAddr::new(elf.header.pt2.entry_point());
 
         let mut inner = proc.write();
         inner.init_stack_frame(entry, stack_top);
-        // FIXME: mark process as ready
+
+        // 3. mark process as ready
         inner.pause();
         drop(inner);
 
         trace!("New {:#?}", &proc);
-
         let pid = proc.pid();
-        // FIXME: something like kernel thread
+
+        // 4. something like kernel thread
         self.add_proc(pid, proc);
         self.push_ready(pid);
         pid

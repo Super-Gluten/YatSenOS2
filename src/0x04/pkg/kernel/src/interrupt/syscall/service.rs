@@ -1,12 +1,10 @@
-use core::alloc::Layout;
-use chrono::{NaiveDate, NaiveTime};
 use chrono::{Duration, NaiveDateTime};
+use chrono::{NaiveDate, NaiveTime};
+use core::alloc::Layout;
 use uefi::runtime::Time;
 
-use crate::memory::*;
 use crate::proc;
 use crate::proc::*;
-use crate::utils::*;
 
 use super::SyscallArgs;
 
@@ -117,7 +115,7 @@ pub fn sleep() {
     let start = uefi::runtime::get_time().unwrap();
     let dur = Duration::seconds(SLEEP_TIME);
     let mut current = start;
-    while time_diff(start, current) < dur  {
+    while time_diff(start, current) < dur {
         current = uefi::runtime::get_time().unwrap();
     }
 }
@@ -128,27 +126,26 @@ pub fn time_diff(start: Time, end: Time) -> Duration {
             start.year().into(),
             start.month().into(),
             start.day().into(),
-        ).unwrap(),
+        )
+        .unwrap(),
         NaiveTime::from_hms_nano_opt(
             start.hour().into(),
             start.minute().into(),
             start.second().into(),
             start.nanosecond().into(),
-        ).unwrap()
+        )
+        .unwrap(),
     );
-    
-        let end_chrono = NaiveDateTime::new(
-        NaiveDate::from_ymd_opt(
-            end.year().into(),
-            end.month().into(),
-            end.day().into(),
-        ).unwrap(),
+
+    let end_chrono = NaiveDateTime::new(
+        NaiveDate::from_ymd_opt(end.year().into(), end.month().into(), end.day().into()).unwrap(),
         NaiveTime::from_hms_nano_opt(
             end.hour().into(),
             end.minute().into(),
             end.second().into(),
             end.nanosecond().into(),
-        ).unwrap()
+        )
+        .unwrap(),
     );
 
     end_chrono - start_chrono

@@ -1,16 +1,12 @@
 use super::*;
-use crate::memory::*;
 use alloc::sync::{Arc, Weak};
 use alloc::vec::Vec;
 use spin::*;
 use vm::*;
-use x86_64::structures::paging::mapper::MapToError;
-use x86_64::structures::paging::page::PageRange;
-use x86_64::structures::paging::*;
 
-use xmas_elf::ElfFile;
 use crate::humanized_size;
 use stack::STACK_MAX_SIZE;
+use xmas_elf::ElfFile;
 
 #[derive(Clone)]
 pub struct Process {
@@ -251,8 +247,8 @@ impl core::fmt::Display for Process {
         let inner = self.inner.read();
         let memory_size = inner.vm().memory_usage();
         let (size, unit) = humanized_size(memory_size);
-        let stack_usage_percent = (memory_size as f64) / ( STACK_MAX_SIZE as f64) * 100.0;
-        
+        let stack_usage_percent = (memory_size as f64) / (STACK_MAX_SIZE as f64) * 100.0;
+
         write!(
             f,
             " #{:-3} | #{:-3} | {:12} | {:<7} | {:<7} | {:<12} | {:.2}%",

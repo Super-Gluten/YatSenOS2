@@ -7,8 +7,7 @@ macro_rules! entry {
         #[unsafe(export_name = "_start")]
         pub extern "C" fn __impl_start() {
             let ret = $fn();
-            // FIXME: after syscall, add lib::sys_exit(ret);
-            lib::sys_exit(ret); // 调用syscall.rs中的sys_exit()
+            lib::sys_exit(ret);
         }
     };
 }
@@ -31,7 +30,5 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
         location,
         info.message()
     );
-
-    // FIXME: after syscall, add lib::sys_exit(1);
-    crate::sys_exit(1); // 调用syscall.rs中的sys_exit()
+    crate::sys_exit(1);
 }

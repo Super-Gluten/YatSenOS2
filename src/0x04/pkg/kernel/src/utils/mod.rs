@@ -24,7 +24,6 @@ mod macros;
 #[macro_use]
 pub mod regs;
 
-use alloc::format;
 pub mod func;
 pub mod logger;
 pub mod resource;

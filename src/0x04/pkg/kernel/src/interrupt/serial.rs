@@ -38,7 +38,7 @@ fn receive() {
                         // push key to input_buffer if successfully parsed
                         if !s.is_empty() {
                             // the size of `serial_buffer` is less than a char
-                            // that's why `ch` can be converted into the parameter of `push_key()` 
+                            // that's why `ch` can be converted into the parameter of `push_key()`
                             let ch = s.chars().next().unwrap();
                             push_key(DecodedKey::Unicode(ch));
                             serial_buffer.clear();

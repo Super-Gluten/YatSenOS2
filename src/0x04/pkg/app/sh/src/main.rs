@@ -4,10 +4,9 @@
 mod consts;
 
 extern crate lib;
-use lib::*;
-use consts::*;
 use alloc::string::{String, ToString};
-
+use consts::*;
+use lib::*;
 
 fn main() -> isize {
     print!("\x1B[2J\x1B[H"); // 清屏
@@ -15,7 +14,7 @@ fn main() -> isize {
     println!("\n\n");
 
     // 组合字母形成完整的banner
-    let mut banner = [
+    let banner = [
         String::from(SIGN[0]),
         String::from(SIGN[1]),
         String::from(SIGN[2]),
@@ -89,7 +88,7 @@ fn main() -> isize {
             "clear" => {
                 print!("\x1B[2J\x1B[H"); // 完成清屏
             }
-            "" => {}  // 处理空输入
+            "" => {} // 处理空输入
             _ => {
                 println!("Unknown command: {}; maybe you can try 'help' command?", op);
             }

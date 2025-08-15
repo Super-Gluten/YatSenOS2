@@ -1,11 +1,7 @@
 use super::*;
+use crate::utils::resource::ResourceSet;
 use alloc::{collections::BTreeMap, sync::Arc};
 use spin::RwLock;
-use x86_64::structures::paging::{
-    Page,
-    page::{PageRange, PageRangeInclusive},
-};
-use crate::utils::resource::ResourceSet;
 
 #[derive(Debug, Clone)]
 pub struct ProcessData {

@@ -8,8 +8,8 @@ pub const SIGN: [&str; 5] = [
 
 pub const RESET: &str = "\x1b[0m";
 pub const BOLD: &str = "\x1b[1m";
-pub const BLINK: &str = "\x1b[5m";
-pub const DIM: &str = "\x1b[2m"; // 暗淡效果，用于制造阴影
+// pub const BLINK: &str = "\x1b[5m";
+// pub const DIM: &str = "\x1b[2m"; // 暗淡效果，用于制造阴影
 pub const R1: &str = "\x1b[91m"; // 亮红
 pub const R2: &str = "\x1b[93m"; // 亮黄
 pub const R3: &str = "\x1b[92m"; // 亮绿

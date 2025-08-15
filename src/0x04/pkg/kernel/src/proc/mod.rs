@@ -35,16 +35,14 @@ mod process;
 pub mod processor;
 mod vm;
 
-use core::iter::Enumerate;
-
 use manager::*;
 use process::*;
 use processor::*;
 use vm::*;
 
 use alloc::string::String;
-use core::fmt;
 pub use context::ProcessContext;
+use core::fmt;
 pub use data::ProcessData;
 pub use paging::PageTableContext;
 pub use pid::ProcessId;
@@ -56,8 +54,7 @@ pub const KERNEL_PID: ProcessId = ProcessId(1);
 
 use alloc::format;
 use alloc::string::ToString;
-use alloc::sync::{Arc, Weak};
-use alloc::vec::Vec;
+use alloc::sync::Arc;
 use xmas_elf::ElfFile;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -164,7 +161,6 @@ pub fn list_app() {
     });
 }
 
-// 0x04 add: spawn && elf_spawn && read && write
 pub fn spawn(name: &str) -> Option<ProcessId> {
     let app = x86_64::instructions::interrupts::without_interrupts(|| {
         // find the corrsponding app by name and spawn it
@@ -233,9 +229,9 @@ impl fmt::Display for ProgramStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let status_str: &'static str = match self {
             ProgramStatus::Running => "Running",
-            ProgramStatus::Ready   => "Ready  ",
+            ProgramStatus::Ready => "Ready  ",
             ProgramStatus::Blocked => "Blocked",
-            ProgramStatus::Dead    => "Dead   ",
+            ProgramStatus::Dead => "Dead   ",
         };
         write!(f, "{}", status_str)
     }

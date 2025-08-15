@@ -77,7 +77,7 @@ pub fn dispatcher(context: &mut ProcessContext) {
 
         // None
         Syscall::Sleep => sleep(),
-        
+
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented
         // ----------------------------------------------------

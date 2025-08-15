@@ -1,9 +1,7 @@
 use crate::proc::PageTableContext;
 use linked_list_allocator::LockedHeap;
 use x86_64::VirtAddr;
-use x86_64::structures::paging::{
-    FrameAllocator, Mapper, Page, PageTableFlags, Size4KiB, mapper::MapToError,
-};
+use x86_64::structures::paging::{Size4KiB, mapper::MapToError};
 
 pub const USER_HEAP_START: usize = 0x4000_0000_0000;
 pub const USER_HEAP_SIZE: usize = 1024 * 1024; // 1 MiB
@@ -30,7 +28,7 @@ pub fn init_user_heap() -> Result<(), MapToError<Size4KiB>> {
     let user_heap_start = VirtAddr::new(USER_HEAP_START as u64);
     let user_heap_end = user_heap_start + USER_HEAP_SIZE as u64;
 
-    elf::user_map_range(
+    let _ = elf::user_map_range(
         USER_HEAP_START as u64,
         USER_HEAP_PAGE as u64,
         mapper,

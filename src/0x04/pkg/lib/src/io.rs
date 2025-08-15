@@ -1,7 +1,7 @@
 use crate::*;
+use alloc::str::from_utf8;
 use alloc::string::{String, ToString};
 use alloc::vec;
-use alloc::str::from_utf8;
 
 pub struct Stdin;
 pub struct Stdout;
@@ -41,7 +41,7 @@ impl Stdin {
                                         sys_write(1, "\x08\x20\x08".as_bytes());
                                     }
                                 }
-                                
+
                                 // Handle newline (end of input)
                                 '\n' | '\r' => {
                                     sys_write(1, "\n".as_bytes());

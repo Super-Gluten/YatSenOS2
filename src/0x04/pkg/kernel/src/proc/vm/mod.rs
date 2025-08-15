@@ -63,12 +63,7 @@ impl ProcessVm {
         // because it's smaller than stack_top_addr
         let page_table = &mut self.page_table.mapper();
         let frame_alloc = &mut *get_frame_alloc_for_sure();
-        elf::user_map_range(
-            stack_bot_addr, 
-            STACK_DEF_PAGE, 
-            page_table, 
-            frame_alloc,
-        ).unwrap();
+        elf::user_map_range(stack_bot_addr, STACK_DEF_PAGE, page_table, frame_alloc).unwrap();
 
         // 4. Return the VirtAddr at the top of stack
         virtual_stack_top_addr
@@ -90,13 +85,7 @@ impl ProcessVm {
         let alloc = &mut *get_frame_alloc_for_sure();
 
         // load elf to process pagetable
-        elf::load_elf(
-            elf,
-            *PHYSICAL_OFFSET.get().unwrap(),
-            mapper,
-            alloc,
-            true,
-        ).unwrap();
+        elf::load_elf(elf, *PHYSICAL_OFFSET.get().unwrap(), mapper, alloc, true).unwrap();
 
         self.stack.init(mapper, alloc);
     }
@@ -110,7 +99,8 @@ impl ProcessVm {
             self.stack.stack_usage(),
             page_table,
             frame_allocator,
-        ).expect("Failed to clean up current process' stack");
+        )
+        .expect("Failed to clean up current process' stack");
     }
 }
 
