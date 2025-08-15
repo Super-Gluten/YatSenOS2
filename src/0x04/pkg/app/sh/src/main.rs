@@ -72,6 +72,7 @@ fn main() -> isize {
                     } else {
                         sys_stat();
                         println!("exited with {}: {}", name[0], sys_wait_pid(pid));
+                        // sys_sleep();
                     }
                 }
                 None => println!("Error: Please specify application path"),

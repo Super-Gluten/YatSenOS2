@@ -72,3 +72,8 @@ pub fn sys_exit(code: isize) -> ! {
     syscall!(Syscall::Exit, code as u64);
     unreachable!("This process should be terminated by now.")
 }
+
+#[inline(always)]
+pub fn sys_sleep() {
+    syscall!(Syscall::Sleep);
+}
