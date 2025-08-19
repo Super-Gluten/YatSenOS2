@@ -64,7 +64,6 @@ pub fn wait(init: proc::ProcessId) {
     info!("wait happen");
     loop {
         if proc::still_alive(init) {
-            // Why? Check reflection question 5
             x86_64::instructions::hlt();
         } else {
             break;

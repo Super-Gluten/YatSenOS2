@@ -56,6 +56,14 @@ impl ProcessContext {
 
         trace!("Init stack frame: {:#?}", &self.stack_frame);
     }
+
+    pub fn get_rsp(&self) -> VirtAddr {
+        self.value.stack_frame.stack_pointer.clone()
+    }
+
+    pub fn update_rsp(&mut self, stack_top: u64) {
+        self.value.stack_frame.stack_pointer = VirtAddr::new(stack_top);
+    }
 }
 
 impl Default for ProcessContextValue {

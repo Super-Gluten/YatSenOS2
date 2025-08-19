@@ -77,3 +77,8 @@ pub fn sys_exit(code: isize) -> ! {
 pub fn sys_sleep() {
     syscall!(Syscall::Sleep);
 }
+
+#[inline(always)]
+pub fn sys_fork() -> u16 {
+    syscall!(Syscall::Fork) as u16
+}

@@ -46,7 +46,7 @@ impl ProcessVm {
         // 1. Calculate the physical address of stack
         let stack_top_addr = STACK_INIT_TOP - STACK_MAX_SIZE * (pid.0 as u64 - 1);
         let stack_bot_addr = STACK_INIT_BOT - STACK_MAX_SIZE * (pid.0 as u64 - 1);
-        info!("top {:#x} bot {:#x}", stack_top_addr, stack_bot_addr);
+        info!("init stack for process with Top: [{:#x}]; Bot [{:#x}]", stack_top_addr, stack_bot_addr);
 
         // 2. Virtualize the stack_top and create the stack
         let virtual_stack_top_addr = VirtAddr::new(stack_top_addr);
@@ -101,6 +101,19 @@ impl ProcessVm {
             frame_allocator,
         )
         .expect("Failed to clean up current process' stack");
+    }
+
+    pub fn fork(&self, stack_offset_count: u64) -> Self {
+        // clone the page table context (see instructions)
+        let owned_page_table = self.page_table.fork();
+
+        let mapper = &mut owned_page_table.mapper();
+        let alloc = &mut *get_frame_alloc_for_sure();
+
+        Self {
+            page_table: owned_page_table,
+            stack: self.stack.fork(mapper, alloc, stack_offset_count),
+        }
     }
 }
 

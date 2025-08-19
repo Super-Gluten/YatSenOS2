@@ -150,3 +150,7 @@ pub fn time_diff(start: Time, end: Time) -> Duration {
 
     end_chrono - start_chrono
 }
+
+pub fn sys_fork(context: &mut ProcessContext) {
+    proc::fork(context);
+}

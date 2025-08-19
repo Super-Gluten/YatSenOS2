@@ -49,10 +49,12 @@
 //! - [`x86_64::structures::paging::Page`](https://docs.rs/x86_64/latest/x86_64/structures/paging/struct.Page.html)
 //! - [`PageRange`](https://docs.rs/x86_64/latest/x86_64/structures/paging/struct.PageRange.html)
 
+use elf::user_map_range;
 use x86_64::{
     VirtAddr,
     structures::paging::{Page, mapper::MapToError, page::*},
 };
+ use core::ptr::copy_nonoverlapping;
 
 use super::{FrameAllocatorRef, MapperRef};
 
@@ -152,7 +154,7 @@ impl Stack {
     pub fn init(&mut self, mapper: MapperRef, alloc: FrameAllocatorRef) {
         debug_assert!(self.usage == 0, "Stack is not empty.");
 
-        self.range = elf::user_map_range(STACK_INIT_BOT, STACK_DEF_PAGE, mapper, alloc).unwrap();
+        self.range = user_map_range(STACK_INIT_BOT, STACK_DEF_PAGE, mapper, alloc).unwrap();
         self.usage = STACK_DEF_PAGE;
     }
 
@@ -212,7 +214,7 @@ impl Stack {
         // # Attention
         // The os is page aligned, using addr.as_u64() as the first parameter for map_range()
         // will disrupt page alignment and memory layout
-        let new_page = elf::user_map_range(
+        let new_page = user_map_range(
             aim_page.start_address().as_u64(),
             count_alloc,
             mapper,
@@ -244,6 +246,58 @@ impl Stack {
 
     pub fn stack_usage(&self) -> u64 {
         self.usage
+    }
+
+    pub fn fork(
+        &self,
+        mapper: MapperRef,
+        alloc: FrameAllocatorRef,
+        stack_offset_count: u64,
+    ) -> Self {
+        // FIXME: alloc & map new stack for child (see instructions)
+        let mut child_stack_top = (self.range.start - stack_offset_count).start_address();
+        let child_usage = self.usage;
+        while user_map_range(
+            child_stack_top.as_u64(), 
+            child_usage, 
+            mapper, 
+            alloc,
+        ).is_err() {
+            child_stack_top -= STACK_MAX_SIZE;
+            trace!("Mapping is not empty, stack grows down to {:#x}", child_stack_top.as_u64());
+        }
+
+        // FIXME: copy the *entire stack* from parent to child
+        self.clone_range(
+            self.range.start.start_address().as_u64(),
+            child_stack_top.as_u64(), 
+            child_usage,
+        );
+        // FIXME: return the new stack
+        let child_start_page = Page::containing_address(child_stack_top);
+        let child_end_page = child_start_page + child_usage;
+        let child_range = Page::range(child_start_page, child_end_page);
+
+        Self {
+            range: child_range,
+            usage: child_usage,
+        }
+    }
+
+    /// Clone a range of memory
+    ///
+    /// - `src_addr`: the address of the source memory
+    /// - `dest_addr`: the address of the target memory
+    /// - `size`: the count of pages to be cloned
+    fn clone_range(&self, cur_addr: u64, dest_addr: u64, size: u64) {
+        trace!("Clone range: {:#x} -> {:#x}", cur_addr, dest_addr);
+        unsafe {
+            copy_nonoverlapping::<u64>(
+                cur_addr as *mut u64,
+                dest_addr as *mut u64,
+                (size * Size4KiB::SIZE / 8) as usize,
+            );
+        }
     }
 }
 

@@ -234,4 +234,17 @@ impl ProcessManager {
     pub fn read(&self, fd: u8, buf: &mut [u8]) -> isize {
         self.current().read().read(fd, buf)
     }
+
+    pub fn fork(&self) -> Arc<Process> {
+        // FIXME: get current process
+        let proc = self.current();
+        // FIXME: fork to get child
+        let child: Arc<Process> = proc.fork();
+        // FIXME: add child to process list
+        self.add_proc(child.pid(), child.clone());
+        // FOR DBG: maybe print the process ready queue?
+        self.print_process_list();
+
+        return child;
+    }
 }
