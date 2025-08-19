@@ -1,3 +1,66 @@
+//! ### `BTreeMap` 相关操作
+//! | 函数/方法                         | 作用                                                                 |
+//! |--------------------------------- |----------------------------------------------------------------------|
+//! | `BTreeMap::new()`                | 创建一个新的空 `BTreeMap`                                             |
+//! | `map.insert(key, value)`         | 插入键值对，返回该键之前对应的值（若存在则为 `Some(old_value)`，否则为 `None`） |
+//! | `map.get(&key)`                  | 获取键对应的值的不可变引用，返回 `Option<&V>`                          |
+//! | `map.get_mut(&key)`              | 获取键对应的值的可变引用，返回 `Option<&mut V>`                        |
+//! | `map.contains_key(&key)`         | 检查映射中是否包含指定键，返回布尔值                                   |
+//! | `map.remove(&key)`               | 移除指定键对应的键值对，返回被移除的值（若存在则为 `Some(value)`）      |
+//! | `map.entry(key).or_insert(value)`| 若键不存在则插入默认值，返回该键对应值的可变引用                         |
+//! | `map.range(a..b)`                | 返回键在 `[a, b)` 范围内的键值对迭代器                                 |
+//! | `map.keys()`                     | 返回所有键的迭代器（按排序顺序）                                       |
+//! | `map.values()`                   | 返回所有值的迭代器（按键的排序顺序）                                   |
+//!
+//! ### `BTreeSet` 相关操作
+//! | 函数/方法                         | 作用                                                                 |
+//! |--------------------------------- |----------------------------------------------------------------------|
+//! | `BTreeSet::new()`                | 创建一个新的空 `BTreeSet`                                             |
+//! | `set.insert(value)`              | 插入元素，若元素已存在则返回 `false`，否则返回 `true`                  |
+//! | `set.contains(&value)`           | 检查集合中是否包含指定元素，返回布尔值                                 |
+//! | `set.remove(&value)`             | 移除指定元素，返回是否成功移除（存在则为 `true`）                       |
+//! | `set.range(a..b)`                | 返回元素在 `[a, b)` 范围内的迭代器（按排序顺序）                       |
+//! | `set.union(&other)`              | 返回与另一个集合的并集迭代器（包含两集合中所有不重复元素）              |
+//! | `set.intersection(&other)`       | 返回与另一个集合的交集迭代器（包含两集合共有的元素）                    |
+//! | `set.difference(&other)`         | 返回与另一个集合的差集迭代器（包含本集合有而另一个集合没有的元素）      |
+//! | `set.is_subset(&other)`          | 检查本集合是否为另一个集合的子集（所有元素都在另一个集合中）            |
+//!
+//! ## 示例代码
+//! ```rust
+//! use std::collections::{BTreeMap, BTreeSet};
+//!
+//! // 1. BTreeMap 操作
+//! let mut map = BTreeMap::new();
+//! map.insert(2, "two");
+//! map.insert(1, "one");
+//! assert_eq!(map.get(&1), Some(&"one"));
+//!
+//! // 使用 entry API 插入或修改
+//! map.entry(3).or_insert("three");
+//! assert!(map.contains_key(&3));
+//!
+//! // 2. BTreeSet 操作
+//! let mut set = BTreeSet::new();
+//! set.insert(3);
+//! set.insert(1);
+//! set.insert(2);
+//! assert!(set.contains(&2));
+//!
+//! // 集合运算
+//! let other = BTreeSet::from([2, 3, 4]);
+//! let intersection: BTreeSet<_> = set.intersection(&other).cloned().collect();
+//! assert_eq!(intersection, BTreeSet::from([2, 3]));
+//! ```
+//!
+//! ## 注意事项（Attention）
+//! 1. **排序要求**：键（`BTreeMap`）和元素（`BTreeSet`）必须实现 `Ord` trait 以保证排序性。
+//! 2. **唯一性**：`BTreeMap` 的键和 `BTreeSet` 的元素都是唯一的，重复插入会被覆盖或忽略。
+//! 3. **性能特性**：插入、删除、查询操作的平均时间复杂度为 O(log n)，适合需要有序访问的场景。
+//!
+//! 更多细节参考官方文档：
+//! - [`std::collections::BTreeMap`](https://doc.rust-lang.org/std/collections/struct.BTreeMap.html)
+//! - [`std::collections::BTreeSet`](https://doc.rust-lang.org/std/collections/struct.BTreeSet.html)
+
 use super::*;
 use crate::memory::get_frame_alloc_for_sure;
 use alloc::{collections::*, format, sync::Arc, sync::Weak};
@@ -25,9 +88,10 @@ pub fn get_process_manager() -> &'static ProcessManager {
 }
 
 pub struct ProcessManager {
-    processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>, // 用读写锁保护的进程键值对
-    ready_queue: Mutex<VecDeque<ProcessId>>,              // 用于进程管理的双端队列
-    app_list: boot::AppListRef,                           // 用户程序的列表
+    processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>,       // 用读写锁保护的进程键值对
+    ready_queue: Mutex<VecDeque<ProcessId>>,                    // 用于进程管理的双端队列
+    app_list: boot::AppListRef,                                 // 用户程序的列表
+    wait_queue: Mutex<BTreeMap<ProcessId, BTreeSet<ProcessId>>>,// 用于存储等待的进程ID的集合
 }
 
 impl ProcessManager {
@@ -43,6 +107,7 @@ impl ProcessManager {
             processes: RwLock::new(processes),
             ready_queue: Mutex::new(ready_queue),
             app_list: apps,
+            wait_queue: Mutex::new(BTreeMap::new()),
         }
     }
 
@@ -163,6 +228,12 @@ impl ProcessManager {
         info!("ret = {}", ret);
         proc.dealloc_current_stack();
         proc.kill(ret);
+
+        if let Some(pids) = self.wait_queue.lock().remove(&pid) {
+            for pid in pids {
+                self.wake_up(pid, Some(ret));
+            }
+        }
     }
 
     pub fn print_process_list(&self) {
@@ -246,5 +317,43 @@ impl ProcessManager {
         // self.print_process_list();
 
         return child;
+    }
+
+    /// Block the process with the given pid
+    pub fn block(&self, pid: ProcessId) {
+        if let Some(proc) = self.get_proc(&pid) {
+            // FIXME: set the process as blocked
+            proc.write().block();
+        }
+    }
+
+
+    /// Add to `wait_queue` with given pid
+    pub fn wait_pid(&self, pid: ProcessId) {
+        let mut wait_queue = self.wait_queue.lock();
+        // FIXME: push the current process to the wait queue
+        //        `processor::get_pid()` is waiting for `pid`
+        wait_queue
+            .entry(pid)
+            .or_default()
+            .insert(processor::get_pid());
+    }
+
+    /// Wake up the process with the given pid
+    ///
+    /// If `ret` is `Some`, set the return value of the process
+    pub fn wake_up(&self, pid: ProcessId, ret: Option<isize>) {
+        if let Some(proc) = self.get_proc(&pid) {
+            let mut inner = proc.write();
+            if let Some(ret) = ret {
+                // FIXME: set the return value of the process
+                //        like `context.set_rax(ret as usize)`
+                inner.set_rax(ret as usize);
+            }
+            // FIXME: set the process as ready
+            // FIXME: push to ready queue
+            inner.pause();
+            self.push_ready(pid);
+        }
     }
 }

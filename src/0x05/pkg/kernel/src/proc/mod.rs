@@ -219,7 +219,10 @@ pub fn wait_pid(pid: ProcessId, context: &mut ProcessContext) {
         if !still_alive(pid) {
             let exit_code: isize = proc.read().exit_code().unwrap();
             context.set_rax(exit_code as usize);
+        } else {
+            manager.wait_pid(pid);
             manager.save_current(context);
+            manager.current().write().block();
             manager.switch_next(context);
         }
     });

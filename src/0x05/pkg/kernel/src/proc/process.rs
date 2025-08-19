@@ -151,6 +151,10 @@ impl ProcessInner {
         self.status = ProgramStatus::Running;
     }
 
+    pub fn block(&mut self) {
+        self.status = ProgramStatus::Blocked;
+    }
+
     /// # Returns
     /// - none if process still alive.
     /// - Some(ret) if process is dead
@@ -275,6 +279,10 @@ impl ProcessInner {
 
     pub fn add_child(&mut self, child: Arc<Process>) {
         self.children.push(child);
+    }
+
+    pub fn set_rax(&mut self, value: usize) {
+        self.context.set_rax(value);
     }
 }
 

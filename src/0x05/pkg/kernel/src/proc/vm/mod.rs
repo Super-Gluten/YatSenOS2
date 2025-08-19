@@ -1,3 +1,54 @@
+//! 内存页管理模块
+//!
+//! 使用 `x86_64` crate 提供的分页结构体：
+//! - [`Page`]：单个内存页（4KB）
+//! - [`PageRange`]：连续的页范围
+//!
+//! # 主要功能
+//! - **页对齐操作**：所有地址必须为 4096 的倍数（`Size4KiB`）。
+//! - **动态栈管理**：支持向下增长的栈（高地址 → 低地址）。
+//!
+//! ## 核心函数说明
+//! ### `Page` 相关操作
+//! | 函数/方法                         | 作用                                                                 |
+//! |--------------------------------- |----------------------------------------------------------------------|
+//! | `Page::containing_address(addr)` | 返回包含 `addr` 的页（自动对齐到 4KB 边界）                             |
+//! | `Page::start_address()`          | 获取该页的起始物理地址（`VirtAddr` 类型）                               |
+//! | `Page::<Size4KiB>::from_start_address(addr)` | 从对齐的地址构造 `Page`（需显式指定页大小）                  |
+//! | `Page + usize` / `Page - usize` | 页地址算术运算（按页大小跳转，如 `Page(0x1000) + 2 = Page(0x3000)`）      |
+//!
+//! ### `PageRange` 相关操作
+//! | 函数/方法                     | 作用                                                                 |
+//! |-------------------------------|---------------------------------------------------------------------|
+//! | `Page::range(start, end)`     | 构造左闭右开区间 `[start, end)` 的页范围                              |
+//! | `PageRange::contains(page)`   | 检查某页是否在范围内                                                 |
+//! | `PageRange::overlaps(other)`  | 检查两个页范围是否重叠                                               |
+//!
+//! ## 示例代码
+//! ```rust
+//! use x86_64::{VirtAddr, structures::paging::{Page, PageRange}};
+//!
+//! // 1. 创建页和页范围
+//! let page = Page::containing_address(VirtAddr::new(0x3000)); // 包含地址 0x3000 的页
+//! let range = Page::range(Page::from_start_address(VirtAddr::new(0x1000)),
+//!                         Page::from_start_address(VirtAddr::new(0x4000))); // [0x1000, 0x4000)
+//!
+//! // 2. 检查页是否在范围内
+//! assert!(range.contains(page)); // 0x3000 ∈ [0x1000, 0x4000)
+//!
+//! // 3. 页地址算术
+//! let next_page = page + 1; // Page(0x4000)
+//! ```
+//!
+//! ## 注意事项（Attention）
+//! 1. **地址对齐**：所有操作必须保证地址是 4096 的倍数，否则会触发未定义行为。
+//! 2. **栈增长方向**：本模块默认栈向下增长（高地址 → 低地址），`Page::range` 的 `start` 应为栈底。
+//! 3. **页大小**：使用 `Size4KiB` 作为默认页大小，其他大小需显式指定（如 `Page::<Size2MiB>`）。
+//!
+//! 更多细节参考官方文档：
+//! - [`x86_64::structures::paging::Page`](https://docs.rs/x86_64/latest/x86_64/structures/paging/struct.Page.html)
+//! - [`PageRange`](https://docs.rs/x86_64/latest/x86_64/structures/paging/struct.PageRange.html)
+
 use alloc::format;
 use x86_64::{
     VirtAddr,
