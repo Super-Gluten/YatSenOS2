@@ -229,6 +229,7 @@ impl ProcessManager {
         proc.dealloc_current_stack();
         proc.kill(ret);
 
+        // remove correspond value set and wake up those process
         if let Some(pids) = self.wait_queue.lock().remove(&pid) {
             for pid in pids {
                 self.wake_up(pid, Some(ret));
@@ -322,17 +323,15 @@ impl ProcessManager {
     /// Block the process with the given pid
     pub fn block(&self, pid: ProcessId) {
         if let Some(proc) = self.get_proc(&pid) {
-            // FIXME: set the process as blocked
             proc.write().block();
         }
     }
 
-
     /// Add to `wait_queue` with given pid
     pub fn wait_pid(&self, pid: ProcessId) {
         let mut wait_queue = self.wait_queue.lock();
-        // FIXME: push the current process to the wait queue
-        //        `processor::get_pid()` is waiting for `pid`
+        // choose `pid` as key and `processor::get_pid()` as value
+        // to insert into `wait_queue`
         wait_queue
             .entry(pid)
             .or_default()
@@ -346,12 +345,12 @@ impl ProcessManager {
         if let Some(proc) = self.get_proc(&pid) {
             let mut inner = proc.write();
             if let Some(ret) = ret {
-                // FIXME: set the return value of the process
-                //        like `context.set_rax(ret as usize)`
+                // set the return value of the process
+                // like `context.set_rax(ret as usize)`
                 inner.set_rax(ret as usize);
             }
-            // FIXME: set the process as ready
-            // FIXME: push to ready queue
+            // set the process as ready
+            // push to ready queue
             inner.pause();
             self.push_ready(pid);
         }
