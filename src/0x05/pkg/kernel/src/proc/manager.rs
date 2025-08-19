@@ -236,14 +236,14 @@ impl ProcessManager {
     }
 
     pub fn fork(&self) -> Arc<Process> {
-        // FIXME: get current process
+        // 1. get current process
         let proc = self.current();
-        // FIXME: fork to get child
+        // 2. fork to get child
         let child: Arc<Process> = proc.fork();
-        // FIXME: add child to process list
+        // 3. add child to process list
         self.add_proc(child.pid(), child.clone());
         // FOR DBG: maybe print the process ready queue?
-        self.print_process_list();
+        // self.print_process_list();
 
         return child;
     }

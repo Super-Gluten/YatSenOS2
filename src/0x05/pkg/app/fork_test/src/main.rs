@@ -15,7 +15,6 @@ fn main() -> isize {
     // do not alloc heap before `fork`
     // which may cause unexpected behavior since we won't copy the heap in `fork`
     let pid = sys_fork();
-    println!("pid = {}", pid);
 
     if pid == 0 {
         println!("I am the child process");

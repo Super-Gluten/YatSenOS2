@@ -98,9 +98,10 @@ impl Process {
     }
 
     pub fn fork(self: &Arc<Self>) -> Arc<Self> {
-        // FIXME: lock inner as write
+        // 1. lock inner as write
         let mut inner = self.write();
-        // FIXME: inner fork with parent weak ref
+        
+        // 2. inner fork with parent weak ref
         let child_inner = inner.fork(Arc::downgrade(self));
         let child_pid = ProcessId::new();
         // FOR DBG: maybe print the child process info
@@ -109,17 +110,21 @@ impl Process {
             "the process {} fork a child with name: {}, with pid {}", 
             self.pid.0, child_inner.name(), child_pid.0,
         );
-        // FIXME: make the arc of child
+        
+        // 3. make the arc of child
         let child = Arc::new(
             Self {
                 pid: child_pid,
                 inner: Arc::new(RwLock::new(child_inner)),
             });
-        // FIXME: add child to current process's children list
+        
+        // 4. add child to current process's children list
         inner.add_child(child.clone());
-        // FIXME: set fork ret value for parent with `context.set_rax`
+
+        // 5.set fork ret value for parent with `context.set_rax`
         inner.context.set_rax(child_pid.0 as usize);
-        // FIXME: mark the child as ready & return it
+
+        // 6. mark the child as ready & return it
         child.write().pause();
         return child;
     }
@@ -227,13 +232,18 @@ impl ProcessInner {
     }
 
     pub fn fork(&mut self, parent: Weak<Process>) -> ProcessInner {
-        // FIXME: calculate the real stack offset
-        let real_stack_offset_count = STACK_MAX_PAGES * (self.children.len() + 1) as u64;
+        // 1. calculate the real stack offset
+        //
+        // - `real_stack_offset_count` determined by the number of child processes
+        let real_stack_offset_count: u64 = STACK_MAX_PAGES * (self.children.len() + 1) as u64;
         
-        // FIXME: fork the process virtual memory struct
+        // 2. fork the process virtual memory struct
         let child_vm = self.vm_mut().fork(real_stack_offset_count);
         
-        // FIXME: update `rsp` in interrupt stack frame
+        // 3. update `rsp` in interrupt stack frame
+        //
+        //  - `current_stack_top_in_low` 代表栈顶于进程栈空间的相对位置
+        //  - `child_stack_top_in_high` 是子进程的栈空间基址
         let mut child_context = self.context;
         let current_stack_top_in_low = self.context.get_rsp().as_u64() & (STACK_MAX_SIZE - 1);
         let child_stack_top_in_high = child_vm.stack.stack_start().as_u64() & STACK_START_MASK;
@@ -242,12 +252,13 @@ impl ProcessInner {
         child_context.update_rsp(child_stack_top);
         trace!("parent's rsp is {:#x}, child's rsp is {:#x}", self.context.get_rsp(), child_context.get_rsp());
         
-        // FIXME: set the return value 0 for child with `context.set_rax`
+        // 4. set the return value 0 for child with `context.set_rax`
         child_context.set_rax(0);
 
-        // FIXME: clone the process data struct
+        // 5. clone the process data struct
         let child_data = self.proc_data.clone().unwrap();
-        // FIXME: construct the child process inner
+        
+        // 6. construct the child process inner
         ProcessInner {
             name: self.name.clone(),
             parent: Some(parent),

@@ -248,15 +248,20 @@ impl Stack {
         self.usage
     }
 
+    /// Allocate free stack space for child processes
+    /// 
+    /// - `stack_offset_count`: page offset related to the number of child processes
     pub fn fork(
         &self,
         mapper: MapperRef,
         alloc: FrameAllocatorRef,
         stack_offset_count: u64,
     ) -> Self {
-        // FIXME: alloc & map new stack for child (see instructions)
+        // 1. alloc & map new stack for child (see instructions)
         let mut child_stack_top = (self.range.start - stack_offset_count).start_address();
         let child_usage = self.usage;
+        // while the stack space isn't free for process,
+        // the `child_stack_top` grows downwards
         while user_map_range(
             child_stack_top.as_u64(), 
             child_usage, 
@@ -267,13 +272,14 @@ impl Stack {
             trace!("Mapping is not empty, stack grows down to {:#x}", child_stack_top.as_u64());
         }
 
-        // FIXME: copy the *entire stack* from parent to child
+        // 2. copy the *entire stack* from parent to child
         self.clone_range(
             self.range.start.start_address().as_u64(),
             child_stack_top.as_u64(), 
             child_usage,
         );
-        // FIXME: return the new stack
+
+        // 3. return the new stack
         let child_start_page = Page::containing_address(child_stack_top);
         let child_end_page = child_start_page + child_usage;
         let child_range = Page::range(child_start_page, child_end_page);

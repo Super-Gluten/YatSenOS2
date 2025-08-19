@@ -228,14 +228,14 @@ pub fn wait_pid(pid: ProcessId, context: &mut ProcessContext) {
 pub fn fork(context: &mut ProcessContext) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        // FIXME: save_current as parent
+        // 1. save_current as parent
         manager.save_current(&context);
-        // FIXME: fork to get child
+        // 2. fork to get child
         let child = manager.fork();
-        // FIXME: push to child & parent to ready queue
+        // 3. push to child & parent to ready queue
         manager.push_ready(child.pid());
         manager.push_ready(manager.current().pid());
-        // FIXME: switch to next process
+        // 4. switch to next process
         manager.switch_next(context);
     })
 }
