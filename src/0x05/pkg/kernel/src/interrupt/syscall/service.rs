@@ -151,6 +151,22 @@ pub fn time_diff(start: Time, end: Time) -> Duration {
     end_chrono - start_chrono
 }
 
+// None -> pid: u16 or 0 or -1
 pub fn sys_fork(context: &mut ProcessContext) {
     proc::fork(context);
+}
+
+// op: u8, key: u32, val: usize -> ret: any
+pub fn sys_sem(args: &SyscallArgs, context: &mut ProcessContext) {
+    let op = args.arg0;
+    let key = args.arg1;
+    let value = args.arg2;
+
+    match op {
+        0 => context.set_rax(new_sem(key as u32, value)),
+        1 => context.set_rax(remove_sem(key as u32)),
+        2 => sem_signal(key as u32, context),
+        3 => sem_wait(key as u32, context),
+        _ => context.set_rax(usize::MAX),
+    }
 }

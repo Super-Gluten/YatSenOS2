@@ -38,23 +38,32 @@ impl Semaphore {
 
     /// Wait the semaphore (acquire/down/proberen)
     ///
-    /// if the count is 0, then push the process into the wait queue
-    /// else decrease the count and return Ok
+    /// # Returns
+    ///  - `Block(pid)` if count == 0
+    ///  - `Ok` otherwise
     pub fn wait(&mut self, pid: ProcessId) -> SemaphoreResult {
-        // FIXME: if the count is 0, then push pid into the wait queue
-        //          return Block(pid)
-        // FIXME: else decrease the count and return Ok
+        if self.count == 0 {
+            self.wait_queue.push_back(pid);
+            return SemaphoreResult::Block(pid);
+        } else {
+            self.count -= 1;
+            return SemaphoreResult::Ok;
+        }
     }
 
     /// Signal the semaphore (release/up/verhogen)
     ///
-    /// if the wait queue is not empty, then pop a process from the wait queue
-    /// else increase the count
+    /// # Returns
+    ///  - `WakeUp(pid)` if 'wait_queue' isn't empty
+    ///  - `Ok` otherwise
     pub fn signal(&mut self) -> SemaphoreResult {
-        // FIXME: if the wait queue is not empty
-        //          pop a process from the wait queue
-        //          return WakeUp(pid)
-        // FIXME: else increase the count and return Ok
+        if !self.wait_queue.is_empty() {
+            let pid = self.wait_queue.pop_front().unwrap();
+            return SemaphoreResult::WakeUp(pid);
+        } else {
+            self.count += 1;
+            return SemaphoreResult::Ok;
+        }
     }
 }
 
@@ -64,36 +73,57 @@ pub struct SemaphoreSet {
 }
 
 impl SemaphoreSet {
+    // Insert a new semaphore into the sems
     pub fn insert(&mut self, key: u32, value: usize) -> bool {
         trace!("Sem Insert: <{:#x}>{}", key, value);
 
-        // FIXME: insert a new semaphore into the sems
-        //          use `insert(/* ... */).is_none()`
+        let sid = SemaphoreId::new(key);
+        let new_sem = Semaphore::new(value);
+        self.sems
+            .insert(sid, Mutex::new(new_sem))
+            .is_none()
     }
 
+    // Remove the semaphore from the sems
     pub fn remove(&mut self, key: u32) -> bool {
         trace!("Sem Remove: <{:#x}>", key);
 
-        // FIXME: remove the semaphore from the sems
-        //          use `remove(/* ... */).is_some()`
+        self.sems
+            .remove(&SemaphoreId::new(key))
+            .is_none()
     }
 
     /// Wait the semaphore (acquire/down/proberen)
+    /// 
+    /// # Returns
+    ///  - 'wait' operation result if sems exist
+    ///  - `NotExist` if the semaphore is not exist
     pub fn wait(&self, key: u32, pid: ProcessId) -> SemaphoreResult {
         let sid = SemaphoreId::new(key);
 
-        // FIXME: try get the semaphore from the sems
-        //         then do it's operation
-        // FIXME: return NotExist if the semaphore is not exist
+        // try get the semaphore from the sems
+        //  then do it's operation        
+
+        match self.sems.get(&sid) {
+            Some(sem_lock) => sem_lock.lock().wait(pid),
+            None => SemaphoreResult::NotExist,
+        }
     }
 
     /// Signal the semaphore (release/up/verhogen)
+    /// 
+    /// # Returns
+    ///  - 'signal' operation result if sems exist
+    ///  - `NotExist` if the semaphore is not exist
     pub fn signal(&self, key: u32) -> SemaphoreResult {
         let sid = SemaphoreId::new(key);
 
-        // FIXME: try get the semaphore from the sems
-        //         then do it's operation
-        // FIXME: return NotExist if the semaphore is not exist
+        // try get the semaphore from the sems
+        //  then do it's operation
+        match self.sems.get(&sid) {
+            Some(sem_lock) => sem_lock.lock().signal(),
+            None => SemaphoreResult::NotExist,
+        }
     }
 }
 
