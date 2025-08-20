@@ -63,7 +63,7 @@
 
 use super::*;
 use crate::memory::get_frame_alloc_for_sure;
-use alloc::{collections::*, format, sync::Arc, sync::Weak};
+use alloc::{collections::*, vec::Vec, format, sync::Arc, sync::Weak};
 use spin::{Mutex, RwLock};
 use vm::*;
 use xmas_elf::ElfFile;
@@ -88,10 +88,11 @@ pub fn get_process_manager() -> &'static ProcessManager {
 }
 
 pub struct ProcessManager {
-    processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>,       // 用读写锁保护的进程键值对
-    ready_queue: Mutex<VecDeque<ProcessId>>,                    // 用于进程管理的双端队列
-    app_list: boot::AppListRef,                                 // 用户程序的列表
-    wait_queue: Mutex<BTreeMap<ProcessId, BTreeSet<ProcessId>>>,// 用于存储等待的进程ID的集合
+    processes: RwLock<BTreeMap<ProcessId, Arc<Process>>>,           // 用读写锁保护的进程键值对
+    ready_queue: Mutex<VecDeque<ProcessId>>,                        // 用于进程管理的双端队列
+    app_list: boot::AppListRef,                                     // 用户程序的列表
+    wait_queue: Mutex<BTreeMap<ProcessId, BTreeSet<ProcessId>>>,    // 用于存储等待的进程ID的集合
+    block_queue: Mutex<BTreeMap<ProcessId, BTreeSet<ProcessId>>>,   // 用于查询阻塞当前进程的进程ID集合
 }
 
 impl ProcessManager {
@@ -108,6 +109,7 @@ impl ProcessManager {
             ready_queue: Mutex::new(ready_queue),
             app_list: apps,
             wait_queue: Mutex::new(BTreeMap::new()),
+            block_queue: Mutex::new(BTreeMap::new()),
         }
     }
 
@@ -133,7 +135,7 @@ impl ProcessManager {
 
     /// # Returns
     /// - Some(pid) => pid
-    /// None => KERNEL_PID to meet phased requirement（阶段性需求）
+    /// None => KERNEL_PID to meet phased requirement
     #[inline]
     pub fn pop_ready(&self) -> ProcessId {
         let id = match self.ready_queue.lock().pop_front() {
@@ -218,6 +220,7 @@ impl ProcessManager {
         }
 
         let proc = proc.unwrap();
+        let proc_pid = proc.pid();
 
         if proc.read().status() == ProgramStatus::Dead {
             warn!("Process #{} is already dead.", pid);
@@ -232,7 +235,14 @@ impl ProcessManager {
         // remove correspond value set and wake up those process
         if let Some(pids) = self.wait_queue.lock().remove(&pid) {
             for pid in pids {
-                self.wake_up(pid, Some(ret));
+                let mut current_map = self.block_queue.lock();
+                let current_set = current_map.get_mut(&pid).unwrap();
+                current_set.remove(&proc_pid);
+                if current_set.is_empty() {
+                    self.wake_up(pid, Some(ret));
+                } else {
+
+                }
             }
         }
     }
@@ -328,14 +338,21 @@ impl ProcessManager {
     }
 
     /// Add to `wait_queue` with given pid
-    pub fn wait_pid(&self, pid: ProcessId) {
+    pub fn wait_pid(&self, blocking_pid: ProcessId) {
+        let blocked_pid = processor::get_pid();
         let mut wait_queue = self.wait_queue.lock();
         // choose `pid` as key and `processor::get_pid()` as value
         // to insert into `wait_queue`
         wait_queue
-            .entry(pid)
+            .entry(blocking_pid)
             .or_default()
-            .insert(processor::get_pid());
+            .insert(blocked_pid);
+
+        let mut block_queue = self.block_queue.lock();
+        block_queue
+            .entry(blocked_pid)
+            .or_default()
+            .insert(blocking_pid);
     }
 
     /// Wake up the process with the given pid
@@ -354,5 +371,19 @@ impl ProcessManager {
             inner.pause();
             self.push_ready(pid);
         }
+    }
+
+    pub fn query_block(&self, query_pid: ProcessId) -> Vec<ProcessId> {
+        let mut block_queue = self.block_queue.lock();
+        let mut ret_vec: Vec<ProcessId> = Vec::new();
+        match block_queue.get(&query_pid) {
+            Some(set) => {
+                for item in set.iter() {
+                    ret_vec.push(*item);
+                }
+            }
+            None => {}
+        };
+        ret_vec
     }
 }

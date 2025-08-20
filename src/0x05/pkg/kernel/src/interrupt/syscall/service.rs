@@ -170,3 +170,8 @@ pub fn sys_sem(args: &SyscallArgs, context: &mut ProcessContext) {
         _ => context.set_rax(usize::MAX),
     }
 }
+
+// pid: arg0 as u16
+pub fn sys_query_block(args: &SyscallArgs) {
+    proc::query_block(args.arg0 as u16);
+}

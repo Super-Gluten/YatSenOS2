@@ -291,6 +291,18 @@ pub fn sem_wait(key: u32, context: &mut ProcessContext) {
     })
 }
 
+pub fn query_block(pid: u16) {
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let manager = get_process_manager();
+        let vec = manager.query_block(ProcessId(pid));
+        info!("test message: pid # {} has `block_queue` as follows", pid);
+        for item in vec {
+            print!("{}, ", item);
+        }
+        info!("end stdout");
+    })
+}
+
 impl fmt::Display for ProgramStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let status_str: &'static str = match self {

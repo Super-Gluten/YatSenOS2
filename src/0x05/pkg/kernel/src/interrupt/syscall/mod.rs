@@ -84,6 +84,9 @@ pub fn dispatcher(context: &mut ProcessContext) {
         // op: u8, key: u32, val: usize -> ret: any
         Syscall::Sem => sys_sem(&args, context),
 
+        // pid: arg0 as u16
+        Syscall::QueryBlock => sys_query_block(&args),
+
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented
         // ----------------------------------------------------

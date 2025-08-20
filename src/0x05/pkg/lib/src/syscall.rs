@@ -102,3 +102,8 @@ pub fn sys_sem_signal(key: u32) -> bool {
 pub fn sys_sem_wait(key: u32) -> bool {
     syscall!(Syscall::Sem, 3, key as usize) == 0
 }
+
+#[inline(always)]
+pub fn sys_query_block(key: u16) {
+    syscall!(Syscall::QueryBlock, key as usize);
+}

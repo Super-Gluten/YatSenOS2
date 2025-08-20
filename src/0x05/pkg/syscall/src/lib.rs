@@ -23,7 +23,8 @@ pub enum Syscall {
     Stat = 65532,
     Allocate = 65533,
     Deallocate = 65534,
+    QueryBlock = 65535,
 
     #[num_enum(default)]
-    Unknown = 65535,
+    Unknown = 65536,
 }
