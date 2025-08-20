@@ -291,15 +291,19 @@ pub fn sem_wait(key: u32, context: &mut ProcessContext) {
     })
 }
 
-pub fn query_block(pid: u16) {
+pub fn query_block(query_pid: u16) {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        let vec = manager.query_block(ProcessId(pid));
-        info!("test message: pid # {} has `block_queue` as follows", pid);
-        for item in vec {
-            print!("{}, ", item);
+        let vec = manager.query_block(ProcessId(query_pid));
+        if !vec.is_empty() {
+            print!("the process #{} are blocked by process as follow:\n[", query_pid);
+            for pid in vec {
+                print!("{} ", pid);
+            }
+            println!("]\nquery finish");
+        } else {
+            println!("the process #{} isn't blocked by other process", query_pid);
         }
-        info!("end stdout");
     })
 }
 

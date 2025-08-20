@@ -374,7 +374,7 @@ impl ProcessManager {
     }
 
     pub fn query_block(&self, query_pid: ProcessId) -> Vec<ProcessId> {
-        let mut block_queue = self.block_queue.lock();
+        let block_queue = self.block_queue.lock();
         let mut ret_vec: Vec<ProcessId> = Vec::new();
         match block_queue.get(&query_pid) {
             Some(set) => {

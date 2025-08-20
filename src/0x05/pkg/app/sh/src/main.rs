@@ -45,6 +45,7 @@ fn main() -> isize {
                 let commands = [
                     ("la", "列出所有可用应用"),
                     ("run <路径>", "运行指定路径的应用程序"),
+                    ("query <进程pid>", "查看阻塞对应进程的进程pid集合"),
                     ("ps", "显示系统状态"),
                     ("clear", "清屏"),
                     ("exit", "退出终端"),
@@ -76,6 +77,13 @@ fn main() -> isize {
                 }
                 None => println!("Error: Please specify application path"),
             },
+            "query" => match command.next() {
+                Some(pid_str) => {
+                    let pid: u16 = pid_str.parse().expect("can't convert `pid_str` into u16");
+                    sys_query_block(pid); 
+                }
+                None => println!("Error: Corresponding process id doesn't exist"),
+            }
             "ps" => {
                 println!("=====系统状态=====");
                 sys_stat();
