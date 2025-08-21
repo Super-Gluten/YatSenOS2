@@ -36,7 +36,6 @@ fn main() -> isize {
         let binding = stdin().read_line();
         let mut command = binding.trim().split(' '); // 去除首尾的空白字符，并按空格分隔命令和参数
         let op = command.next().unwrap(); // 第一个单词是命令op
-        println!("info!: information is: {}", op);
 
         match op {
             "help" => {
@@ -47,6 +46,7 @@ fn main() -> isize {
                     ("run <路径>", "运行指定路径的应用程序"),
                     ("query <进程pid>", "查看阻塞对应进程的进程pid集合"),
                     ("ps", "显示系统状态"),
+                    ("sleep", "睡眠，没有输入睡眠时长默认睡一会，否则睡输入时长秒数"),
                     ("clear", "清屏"),
                     ("exit", "退出终端"),
                 ];
@@ -87,6 +87,21 @@ fn main() -> isize {
             "ps" => {
                 println!("=====系统状态=====");
                 sys_stat();
+            }
+            "sleep" => match command.next() {
+                Some(sleep_time_str) => {
+                    let sleep_time: usize = sleep_time_str.parse().expect("can't convert `sleep_time_str` info usize");
+                    println!("sleep begin");
+                    println!("zzz");
+                    sys_sleep(Some(sleep_time));
+                    println!("finish sleeping");
+                }
+                None => {
+                    println!("sleep for a while");
+                    println!("zzz");
+                    sys_sleep(None);
+                    println!("finish sleeping");
+                }
             }
             "exit" => {
                 let goodbye = "Goodbye! See you next time!";

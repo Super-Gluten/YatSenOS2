@@ -76,7 +76,7 @@ pub fn dispatcher(context: &mut ProcessContext) {
         Syscall::ListApp => list_app(),
 
         // None
-        Syscall::Sleep => sleep(),
+        Syscall::Sleep => sleep(&args),
 
         // None -> pid: u16 or 0 or -1
         Syscall::Fork => sys_fork(context),

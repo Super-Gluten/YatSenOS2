@@ -8,7 +8,7 @@ use crate::proc::*;
 
 use super::SyscallArgs;
 
-const SLEEP_TIME: i64 = 5;
+const DEFAULT_SLEEP_TIME: i64 = 5;
 
 // path: &str (ptr: arg0 as *const u8, len: arg1) -> pid: u16
 pub fn spawn_process(args: &SyscallArgs) -> usize {
@@ -111,9 +111,13 @@ pub fn list_app() {
     proc::list_app();
 }
 
-pub fn sleep() {
+pub fn sleep(args: &SyscallArgs) {
+    let mut sleep_time: i64 = args.arg0 as i64;
+    if sleep_time == 0 {
+        sleep_time = DEFAULT_SLEEP_TIME;
+    }
     let start = uefi::runtime::get_time().unwrap();
-    let dur = Duration::seconds(SLEEP_TIME);
+    let dur = Duration::seconds(sleep_time);
     let mut current = start;
     while time_diff(start, current) < dur {
         current = uefi::runtime::get_time().unwrap();

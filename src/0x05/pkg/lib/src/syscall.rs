@@ -74,8 +74,12 @@ pub fn sys_exit(code: isize) -> ! {
 }
 
 #[inline(always)]
-pub fn sys_sleep() {
-    syscall!(Syscall::Sleep);
+pub fn sys_sleep(option: Option<usize>) {
+    let sleep_time: usize = match option {
+        Some(time) => time,
+        None => 0,
+    };
+    syscall!(Syscall::Sleep, sleep_time);
 }
 
 #[inline(always)]
