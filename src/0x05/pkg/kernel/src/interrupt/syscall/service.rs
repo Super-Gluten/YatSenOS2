@@ -179,3 +179,12 @@ pub fn sys_sem(args: &SyscallArgs, context: &mut ProcessContext) {
 pub fn sys_query_block(args: &SyscallArgs) {
     proc::query_block(args.arg0 as u16);
 }
+
+// None -> ret 0 or 1
+pub fn sys_get_time() ->  usize {
+    match uefi::runtime::get_time() {
+        Ok(time) => time.hour() as usize *3600 + time.minute() as usize *60 + time.second() as usize,
+
+        Err(_) => 0,
+    }
+}

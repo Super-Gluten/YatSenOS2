@@ -75,7 +75,7 @@ pub fn dispatcher(context: &mut ProcessContext) {
         // None
         Syscall::ListApp => list_app(),
 
-        // None
+        // sleep_time: usize
         Syscall::Sleep => sleep(&args),
 
         // None -> pid: u16 or 0 or -1
@@ -86,6 +86,9 @@ pub fn dispatcher(context: &mut ProcessContext) {
 
         // pid: arg0 as u16
         Syscall::QueryBlock => sys_query_block(&args),
+
+        // None -> ret 0 or 1
+        Syscall::Time => context.set_rax(sys_get_time()),
 
         // ----------------------------------------------------
         // NOTE: following syscall examples are implemented

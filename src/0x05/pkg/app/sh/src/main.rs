@@ -32,7 +32,8 @@ fn main() -> isize {
     }
 
     loop {
-        print!("{BOLD}{R3}[YatSenOS]{R4}> {RESET}");
+        let time: usize = sys_get_time();
+        print!("{R4} -{:02}:{:02}:{:02} {BOLD}{R3}[YatSenOS]{R4}> {RESET}", time/3600, time/60%60, time%60);
         let binding = stdin().read_line();
         let mut command = binding.trim().split(' '); // 去除首尾的空白字符，并按空格分隔命令和参数
         let op = command.next().unwrap(); // 第一个单词是命令op

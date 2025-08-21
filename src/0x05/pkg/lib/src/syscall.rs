@@ -111,3 +111,8 @@ pub fn sys_sem_wait(key: u32) -> bool {
 pub fn sys_query_block(key: u16) {
     syscall!(Syscall::QueryBlock, key as usize);
 }
+
+#[inline(always)]
+pub fn sys_get_time() -> usize {
+    syscall!(Syscall::Time)
+}
