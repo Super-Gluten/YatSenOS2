@@ -1,0 +1,18 @@
+{
+    "rust-analyzer.cargo.target": "x86_64-unknown-none",
+    "rust-analyzer.cargo.extraEnv": {
+        "RUSTFLAGS": "-C link-arg=-Tpkg/kernel/config/kernel.ld -C link-arg=-export-dynamic"
+    },
+    "rust-analyzer.checkOnSave.allTargets": false,
+    "rust-analyzer.cargo.buildScripts.overrideCommand": [
+        "cargo",
+        "build",
+        "--target",
+        "x86_64-unknown-none",
+        "-Zbuild-std=core,alloc",
+        "-Zbuild-std-features=compiler-builtins-mem"
+    ],
+    "rust-analyzer.cargo.targetDir": "target/x86_64-unknown-none",
+    "rust-analyzer.cargo.runBuildScripts": true,
+    "rust-analyzer.procMacro.enable": false
+} 

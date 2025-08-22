@@ -1,0 +1,124 @@
+#![no_std]
+#![no_main]
+
+mod consts;
+
+extern crate lib;
+use alloc::string::{String, ToString};
+use consts::*;
+use lib::*;
+
+fn main() -> isize {
+    print!("\x1B[2J\x1B[H"); // 清屏
+
+    println!("\n\n");
+
+    // 组合字母形成完整的banner
+    let banner = [
+        String::from(SIGN[0]),
+        String::from(SIGN[1]),
+        String::from(SIGN[2]),
+        String::from(SIGN[3]),
+        String::from(SIGN[4]),
+        STUDENT_INFO.to_string(),
+    ];
+
+    for (i, line) in banner.iter().enumerate() {
+        println!("{RESET}");
+
+        print!("\x1B[1A\x1B[2C");
+        let color = RAINBOW[i % RAINBOW.len()];
+        println!("{BOLD}{color}{}{RESET}", line);
+    }
+
+    loop {
+        let time: usize = sys_get_time();
+        print!("{R4} -{:02}:{:02}:{:02} {BOLD}{R3}[YatSenOS]{R4}> {RESET}", time/3600, time/60%60, time%60);
+        let binding = stdin().read_line();
+        let mut command = binding.trim().split(' '); // 去除首尾的空白字符，并按空格分隔命令和参数
+        let op = command.next().unwrap(); // 第一个单词是命令op
+
+        match op {
+            "help" => {
+                println!("\n====可用命令列表为====\n");
+
+                let commands = [
+                    ("la", "列出所有可用应用"),
+                    ("run <路径>", "运行指定路径的应用程序"),
+                    ("query <进程pid>", "查看阻塞对应进程的进程pid集合"),
+                    ("ps", "显示系统状态"),
+                    ("sleep", "睡眠，没有输入睡眠时长默认睡一会，否则睡输入时长秒数"),
+                    ("clear", "清屏"),
+                    ("exit", "退出终端"),
+                ];
+
+                for (idx, (cmd, cmd_info)) in commands.iter().enumerate() {
+                    println!("{}: {}  -->  {}", idx, cmd, cmd_info);
+                }
+                println!(
+                    "any question can ask inventor with information\n{}",
+                    STUDENT_INFO,
+                );
+            }
+            "la" => {
+                sys_list_app();
+            }
+            "run" => match command.next() {
+                Some(path) => {
+                    let name: vec::Vec<&str> = path.rsplit('/').collect();
+                    let pid = sys_spawn(path);
+                    if pid == 0 {
+                        println!("Failed to run app: {}", name[0]);
+                        continue;
+                    } else {
+                        sys_stat();
+                        println!("exited with {}: {}", name[0], sys_wait_pid(pid));
+                        // sys_sleep();
+                    }
+                }
+                None => println!("Error: Please specify application path"),
+            },
+            "query" => match command.next() {
+                Some(pid_str) => {
+                    let pid: u16 = pid_str.parse().expect("can't convert `pid_str` into u16");
+                    sys_query_block(pid); 
+                }
+                None => println!("Error: Corresponding process id doesn't exist"),
+            }
+            "ps" => {
+                println!("=====系统状态=====");
+                sys_stat();
+            }
+            "sleep" => match command.next() {
+                Some(sleep_time_str) => {
+                    let sleep_time: usize = sleep_time_str.parse().expect("can't convert `sleep_time_str` info usize");
+                    println!("sleep begin");
+                    println!("zzz");
+                    sys_sleep(Some(sleep_time));
+                    println!("finish sleeping");
+                }
+                None => {
+                    println!("sleep for a while");
+                    println!("zzz");
+                    sys_sleep(None);
+                    println!("finish sleeping");
+                }
+            }
+            "exit" => {
+                let goodbye = "Goodbye! See you next time!";
+                println!("{}", goodbye);
+                break;
+            }
+            "clear" => {
+                print!("\x1B[2J\x1B[H"); // 完成清屏
+            }
+            "" => {} // 处理空输入
+            _ => {
+                println!("Unknown command: {}; maybe you can try 'help' command?", op);
+            }
+        }
+    }
+    0
+}
+
+entry!(main);

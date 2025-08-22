@@ -1,0 +1,133 @@
+#![no_std]
+#![no_main]
+#![feature(alloc_error_handler)]
+
+#[macro_use]
+extern crate log;
+extern crate alloc;
+
+use elf::load_elf;
+use elf::map_physical_memory;
+use elf::map_range;
+use uefi::mem::memory_map::MemoryMap;
+use uefi::{Status, entry};
+use x86_64::registers::control::*;
+use xmas_elf::ElfFile;
+use ysos_boot::*;
+
+mod config;
+use config::Config;
+
+const CONFIG_PATH: &str = "\\EFI\\BOOT\\boot.conf";
+
+#[entry]
+fn efi_main() -> Status {
+    uefi::helpers::init().expect("Failed to initialize utilities");
+
+    log::set_max_level(log::LevelFilter::Info);
+    info!("Running UEFI bootloader...");
+
+    // 1. Load config
+    let config = {
+        let mut file = open_file(CONFIG_PATH);
+        let buf = load_file(&mut file);
+
+        crate::Config::parse(buf)
+    };
+
+    info!("Config: {:#x?}", config);
+
+    // 2. Load ELF files
+    let elf = {
+        let path = config.kernel_path;
+        let mut file = open_file(path);
+        let buf = load_file(&mut file);
+        ElfFile::new(buf).unwrap()
+    };
+
+    let apps = if config.load_apps {
+        info!("Loading apps...");
+        Some(load_apps())
+    } else {
+        info!("Skip loading apps");
+        None
+    };
+
+    set_entry(elf.header.pt2.entry_point() as usize);
+
+    // 3. Load MemoryMap
+    let mmap = uefi::boot::memory_map(MemoryType::LOADER_DATA).expect("Failed to get memory map");
+
+    let max_phys_addr = mmap
+        .entries()
+        .map(|m| m.phys_start + m.page_count * 0x1000)
+        .max()
+        .unwrap()
+        .max(0x1_0000_0000); // include IOAPIC MMIO area
+
+    // 4. Map ELF segments, kernel stack and physical memory to virtual memory
+    let mut page_table = current_page_table();
+
+    // root page table is readonly, disable write protect (Cr0)
+    unsafe {
+        Cr0::update(|f| f.remove(Cr0Flags::WRITE_PROTECT));
+    }
+
+    // map physical memory to specific virtual address offset
+    let mut frame_allocator = UEFIFrameAllocator;
+    map_physical_memory(
+        config.physical_memory_offset,
+        max_phys_addr,
+        &mut page_table,
+        &mut frame_allocator,
+    );
+    // load and map the kernel elf file
+    let _ = load_elf(
+        &elf,
+        config.physical_memory_offset,
+        &mut page_table,
+        &mut frame_allocator,
+        false,
+    );
+
+    // map kernel stack
+    let (stack_start_address, stack_size) = (config.kernel_stack_address, config.kernel_stack_size);
+    let _ = map_range(
+        stack_start_address,
+        stack_size,
+        &mut page_table,
+        &mut frame_allocator,
+    );
+
+    // recover write protect (Cr0)
+    unsafe {
+        Cr0::update(|f| f.insert(Cr0Flags::WRITE_PROTECT));
+    }
+    free_elf(elf);
+
+    // 5. Pass system table to kernel
+    let ptr = uefi::table::system_table_raw().expect("Failed to get system table");
+    let system_table = ptr.cast::<core::ffi::c_void>();
+
+    // 6. Exit boot and jump to ELF entry
+    info!("Exiting boot services...");
+
+    let mmap = unsafe { uefi::boot::exit_boot_services(MemoryType::LOADER_DATA) };
+    // NOTE: alloc is no longer available
+    // implement: set log level
+    let log_level = config.log_level;
+
+    // construct BootInfo
+    let bootinfo = BootInfo {
+        memory_map: mmap.entries().copied().collect(),
+        physical_memory_offset: config.physical_memory_offset,
+        system_table,
+        loaded_apps: apps,
+        log_level,
+    };
+
+    // align stack to 8 bytes
+    let stacktop = config.kernel_stack_address + config.kernel_stack_size * 0x1000 - 8;
+
+    jump_to_entry(&bootinfo, stacktop);
+}
