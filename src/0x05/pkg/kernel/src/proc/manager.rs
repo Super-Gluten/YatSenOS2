@@ -211,29 +211,28 @@ impl ProcessManager {
         self.current().write().handle_page_fault(addr)
     }
 
-    pub fn kill(&self, pid: ProcessId, ret: isize) {
-        let proc = self.get_proc(&pid);
+    pub fn kill(&self, proc_pid: ProcessId, ret: isize) {
+        let proc = self.get_proc(&proc_pid);
 
         if proc.is_none() {
-            warn!("Process #{} not found.", pid);
+            warn!("Process #{} not found.", proc_pid);
             return;
         }
 
         let proc = proc.unwrap();
-        let proc_pid = proc.pid();
 
         if proc.read().status() == ProgramStatus::Dead {
-            warn!("Process #{} is already dead.", pid);
+            warn!("Process #{} is already dead.", proc_pid);
             return;
         }
 
         trace!("Kill {:#?}", &proc);
-        info!("ret = {}", ret);
+        debug!("ret = {}", ret);
         proc.dealloc_current_stack();
         proc.kill(ret);
 
         // remove correspond value set and wake up those process
-        if let Some(pids) = self.wait_queue.lock().remove(&pid) {
+        if let Some(pids) = self.wait_queue.lock().remove(&proc_pid) {
             for pid in pids {
                 let mut current_map = self.block_queue.lock();
                 let current_set = current_map.get_mut(&pid).unwrap();

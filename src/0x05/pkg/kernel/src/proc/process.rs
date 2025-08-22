@@ -106,7 +106,7 @@ impl Process {
         let child_pid = ProcessId::new();
         // FOR DBG: maybe print the child process info
         //          e.g. parent, name, pid, etc.
-        info!(
+        trace!(
             "the process {} fork a child with name: {}, with pid {}", 
             self.pid.0, child_inner.name(), child_pid.0,
         );
@@ -286,7 +286,6 @@ impl ProcessInner {
     }
 
     pub fn new_sem(&mut self, key: u32, value: usize) -> usize {
-        info!("Semaphore init with key = {}, value = {}", key, value);
         self.proc_data.as_mut().unwrap().new_sem(key, value)
     }
 

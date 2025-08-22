@@ -248,7 +248,7 @@ pub fn fork(context: &mut ProcessContext) {
 pub fn new_sem(key: u32, value: usize) -> usize {
     x86_64::instructions::interrupts::without_interrupts(|| {
         let manager = get_process_manager();
-        info!("Semaphore init with key = {}, value = {}", key, value);
+        debug!("Semaphore init with key = {}, value = {}", key, value);
         manager.current().write().new_sem(key, value)
     })
 }
@@ -296,7 +296,7 @@ pub fn query_block(query_pid: u16) {
         let manager = get_process_manager();
         let vec = manager.query_block(ProcessId(query_pid));
         if !vec.is_empty() {
-            print!("the process #{} are blocked by process as follow:\n[", query_pid);
+            print!("the process #{} are blocked by process as follow:\n[ ", query_pid);
             for pid in vec {
                 print!("{} ", pid);
             }
