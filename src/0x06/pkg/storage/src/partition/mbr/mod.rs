@@ -7,6 +7,8 @@ use core::marker::PhantomData;
 use crate::*;
 pub use entry::*;
 
+const PARTITION_TABLE_ENTRY: [usize; 4] = [0x1BE, 0x1CE, 0x1DE, 0x1EE];
+
 /// The MBR Table
 ///
 /// The disk is a collection of partitions.
@@ -40,6 +42,11 @@ where
             partitions.push(
                 // FIXME: parse the mbr partition from the buffer
                 //      - just ignore other fields for mbr
+                MbrPartition::parse(
+                    buffer[PARTITION_TABLE_ENTRY[i]..PARTITION_TABLE_ENTRY[i] + 16]
+                    .try_into()
+                    .unwrap()
+                )
             );
 
             if partitions[i].is_active() {

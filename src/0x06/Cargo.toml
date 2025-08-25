@@ -6,12 +6,13 @@ members = [
     "pkg/kernel",
     "pkg/syscall",
     "pkg/lib",
-    "pkg/app/*"
+    "pkg/app/*",
+    "pkg/storage",
 ]
 exclude = ["pkg/app/config", "pkg/app/.cargo"]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.6.0"
 edition = "2024"
 
 [profile.release-with-debug]
@@ -57,3 +58,4 @@ lib = { path = "pkg/lib", package = "yslib" }
 elf = { path = "pkg/elf", package = "ysos_elf" }
 syscall_def = { path = "pkg/syscall", package = "ysos_syscall" }
 boot = { path = "pkg/boot", default-features = false, package = "ysos_boot" }
+storage = { path = "pkg/storage", package = "ysos_storage" }

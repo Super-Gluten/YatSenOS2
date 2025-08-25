@@ -71,6 +71,8 @@ where
     fn read_block(&self, offset: usize, block: &mut B) -> FsResult {
         if offset >= self.size {
             return Err(FsError::InvalidOffset);
+        } else {
+            Ok(())
         }
 
         // FIXME: calculate the block offset for inner device
@@ -80,6 +82,8 @@ where
     fn write_block(&self, offset: usize, block: &B) -> FsResult {
         if offset >= self.size {
             return Err(FsError::InvalidOffset);
+        } else {
+            Ok(())
         }
 
         // FIXME: calculate the block offset for inner device

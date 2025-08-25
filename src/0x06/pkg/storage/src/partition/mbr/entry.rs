@@ -4,6 +4,12 @@
 
 use super::*;
 
+/// Low 6 bit mask = 0b0011_1111
+const SECTOR_MASK: u8 = 0x3F; 
+
+/// High 2 bit mask = 0b1100_0000
+const CYLINDER_HIGH_MASK: u8 = 0xC0;
+
 #[derive(Clone, Copy, Default)]
 pub struct MbrPartition {
     data: [u8; 16],
@@ -25,8 +31,54 @@ impl MbrPartition {
     //  NOTE: some fields are not aligned with byte.
     //      define your functions to extract values:
     //
-    //      0x02 - 0x03 begin sector & begin cylinder
-    //      0x06 - 0x07 end sector & end cylinder
+    // 0x01 begin head
+    // 0x02 - 0x03 begin sector & begin cylinder
+    define_field!(u8, 0x01, begin_head);
+    define_field!(u8, 0x02, SECTOR_MASK, begin_sector_raw);
+    define_field!(u8, 0x02, CYLINDER_HIGH_MASK, begin_cylinder_high);
+    define_field!(u8, 0x03, begin_cylinder_low);
+    
+    pub fn begin_sector(&self) -> u8 {
+        let raw = self.begin_sector_raw();
+        if raw == 0 {
+            1
+        } else {
+            raw & SECTOR_MASK
+        }
+    }
+
+    pub fn begin_cylinder(&self) -> u16 {
+        let begin_cylinder_high: u16 = self.begin_cylinder_high() as u16;
+        begin_cylinder_high << 2 | self.begin_cylinder_low() as u16
+    }
+
+    // 0x04 Partition Type
+    define_field!(u8, 0x04, partition_type);
+
+    // 0x05 end head
+    // 0x06 - 0x07 end sector & end cylinder
+    define_field!(u8, 0x05, end_head);
+    define_field!(u8, 0x06, SECTOR_MASK, end_sector_raw);
+    define_field!(u8, 0x06, CYLINDER_HIGH_MASK, end_cylinder_high);
+    define_field!(u8, 0x07, end_cylinder_low);
+    
+    pub fn end_sector(&self) -> u8 {
+        let raw = self.end_sector_raw();
+        if raw == 0 {
+            1
+        } else {
+            raw & SECTOR_MASK
+        }
+    }
+
+    pub fn end_cylinder(&self) -> u16 {
+        let end_cylinder_high: u16 = self.end_cylinder_high() as u16;
+        end_cylinder_high << 2 | self.end_cylinder_low() as u16
+    }
+
+    // 0x08 - 0x0F Start LBA & Total LBA
+    define_field!(u32, 0x08, begin_lba);
+    define_field!(u32, 0x0C, total_lba);
 
     // an example of how to define a field
     // move your mouse on the `define_field!` to see the docs

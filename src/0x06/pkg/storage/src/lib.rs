@@ -9,11 +9,11 @@ extern crate log;
 
 #[macro_use]
 pub mod common;
-mod fs;
+// mod fs;
 mod partition;
 
 pub use common::*;
-pub use fs::*;
+// pub use fs::*;
 pub use partition::*;
 
 use alloc::borrow::ToOwned;

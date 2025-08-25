@@ -12,6 +12,7 @@
 ///     define_field!(u16, 1, field2);
 ///     define_field!(u32, 3, field3);
 ///     define_field!([u8; 3], 7, field4);
+///     define_field!(u8, 1, 0x3F, field5);
 /// }
 ///
 /// impl Debug for Example {
@@ -21,6 +22,7 @@
 ///             .field("field2", &self.field2())
 ///             .field("field3", &self.field3())
 ///             .field("field4", &self.field4_str()) // to get str
+///             .field("field5", &self.field5())
 ///             .finish()
 ///     }
 /// }
@@ -65,6 +67,15 @@ macro_rules! define_field {
             #[doc = "Get `&str` from the " $name " field"]
             pub fn [<$name _str>](&self) -> &str {
                 core::str::from_utf8(&self.data[$offset..$offset+$len]).unwrap_or("")
+            }
+        }
+    };
+
+    (u8, $offset:expr, $mask:expr, $name:ident) => {
+        paste::item! {
+            #[doc = "Get u8 (with mask) from the " $name " field"]
+            pub fn $name(&self) -> u8 {
+                self.data.get($offset).unwrap_or(&0).clone() & $mask
             }
         }
     };
